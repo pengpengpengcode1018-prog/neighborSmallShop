@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["updatedAt", "features"],
+  "properties": {
+    "updatedAt": { "type": "string", "format": "date" },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "phase",
+          "priority",
+          "area",
+          "title",
+          "userVisibleBehavior",
+          "status",
+          "sourcePages",
+          "verification",
+          "evidence"
+        ],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "phase": { "type": "integer", "minimum": 1, "maximum": 7 },
+          "priority": { "type": "integer", "minimum": 1 },
+          "area": { "type": "string" },
+          "title": { "type": "string" },
+          "userVisibleBehavior": { "type": "string" },
+          "status": {
+            "enum": ["not_started", "in_progress", "blocked", "passing"]
+          },
+          "sourcePages": {
+            "type": "array",
+            "items": { "type": "integer", "minimum": 1, "maximum": 52 }
+          },
+          "verification": { "type": "array", "items": { "type": "string" } },
+          "evidence": { "type": "array", "items": { "type": "string" } },
+          "notes": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,11 @@
+node_modules
+dist
+coverage
+work
+outputs
+server/generated
+miniapp/unpackage
+miniapp/src/wxcomponents/vant
+package-lock.json
+docs/references/*.pdf
+

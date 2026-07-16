@@ -1,0 +1,46 @@
+{
+  "name": "nearby-shop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "近邻小铺子社区购物与配送平台",
+  "workspaces": [
+    "admin-web",
+    "miniapp",
+    "server"
+  ],
+  "scripts": {
+    "bootstrap": "npm install",
+    "dev:admin": "npm run dev --workspace @nearby-shop/admin-web",
+    "dev:miniapp": "npm run dev:mp-weixin --workspace @nearby-shop/miniapp",
+    "dev:server": "npm run dev --workspace @nearby-shop/server",
+    "infra:up": "docker compose up -d mysql redis",
+    "infra:down": "docker compose down",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "verify:docs": "node scripts/validate-docs.mjs",
+    "verify:architecture": "node scripts/check-architecture.mjs",
+    "verify:infra": "docker compose config --quiet",
+    "verify": "npm run verify:docs && npm run verify:architecture && npm run verify:infra && npm run lint && npm run typecheck && npm run test && npm run build && npm run format:check"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "packageManager": "npm@11.13.0",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.7.0",
+    "eslint-plugin-vue": "^10.9.2",
+    "globals": "^17.7.0",
+    "pinia": "3.0.4",
+    "prettier": "^3.9.5",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.64.0",
+    "vue": "3.5.39",
+    "vue-eslint-parser": "^10.4.1"
+  }
+}

@@ -1,0 +1,213 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum AdminStatus {
+  ACTIVE   @map("active")
+  DISABLED @map("disabled")
+}
+
+enum AdminLoginResult {
+  SUCCESS @map("success")
+  FAILED  @map("failed")
+  LOCKED  @map("locked")
+}
+
+enum EnableStatus {
+  ENABLED  @map("enabled")
+  DISABLED @map("disabled")
+}
+
+enum StoreStatus {
+  OPEN     @map("open")
+  PAUSED   @map("paused")
+  DISABLED @map("disabled")
+}
+
+enum StoreCommunityStatus {
+  ACTIVE @map("active")
+  PAUSED @map("paused")
+}
+
+enum ProductStatus {
+  ON_SALE   @map("on_sale")
+  SOLD_OUT  @map("sold_out")
+  OFF_SHELF @map("off_shelf")
+}
+
+model Admin {
+  id                  String          @id @default(cuid()) @db.VarChar(30)
+  username            String          @unique(map: "uk_admins_username") @db.VarChar(64)
+  passwordHash        String          @map("password_hash") @db.VarChar(255)
+  displayName         String          @map("display_name") @db.VarChar(64)
+  status              AdminStatus     @default(ACTIVE)
+  failedLoginAttempts Int             @default(0) @map("failed_login_attempts") @db.UnsignedSmallInt
+  lockedUntil         DateTime?       @map("locked_until") @db.DateTime(3)
+  lastLoginAt         DateTime?       @map("last_login_at") @db.DateTime(3)
+  lastLoginIp         String?         @map("last_login_ip") @db.VarChar(45)
+  createdAt           DateTime        @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt           DateTime        @updatedAt @map("updated_at") @db.DateTime(3)
+  loginLogs           AdminLoginLog[]
+  operationLogs       OperationLog[]
+
+  @@index([status], map: "idx_admins_status")
+  @@map("admins")
+}
+
+model AdminLoginLog {
+  id            String           @id @default(cuid()) @db.VarChar(30)
+  adminId       String?          @map("admin_id") @db.VarChar(30)
+  username      String           @db.VarChar(64)
+  result        AdminLoginResult
+  failureReason String?          @map("failure_reason") @db.VarChar(255)
+  ipAddress     String?          @map("ip_address") @db.VarChar(45)
+  userAgent     String?          @map("user_agent") @db.VarChar(500)
+  createdAt     DateTime         @default(now()) @map("created_at") @db.DateTime(3)
+  admin         Admin?           @relation(fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([adminId, createdAt], map: "idx_admin_login_logs_admin_time")
+  @@index([username, createdAt], map: "idx_admin_login_logs_username_time")
+  @@index([result, createdAt], map: "idx_admin_login_logs_result_time")
+  @@map("admin_login_logs")
+}
+
+model OperationLog {
+  id             String   @id @default(cuid()) @db.VarChar(30)
+  adminId        String?  @map("admin_id") @db.VarChar(30)
+  operatorName   String   @map("operator_name") @db.VarChar(64)
+  module         String   @db.VarChar(64)
+  action         String   @db.VarChar(64)
+  businessDataId String?  @map("business_data_id") @db.VarChar(64)
+  description    String   @db.VarChar(500)
+  beforeData     Json?    @map("before_data")
+  afterData      Json?    @map("after_data")
+  requestIp      String?  @map("request_ip") @db.VarChar(45)
+  requestPath    String?  @map("request_path") @db.VarChar(255)
+  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  admin          Admin?   @relation(fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([adminId, createdAt], map: "idx_operation_logs_admin_time")
+  @@index([module, businessDataId, createdAt], map: "idx_operation_logs_target_time")
+  @@index([createdAt], map: "idx_operation_logs_created_at")
+  @@map("operation_logs")
+}
+
+model Community {
+  id              String           @id @default(cuid()) @db.VarChar(30)
+  name            String           @db.VarChar(120)
+  city            String           @db.VarChar(64)
+  district        String           @db.VarChar(64)
+  detailedAddress String           @map("detailed_address") @db.VarChar(255)
+  status          EnableStatus     @default(ENABLED)
+  sortOrder       Int              @default(0) @map("sort_order")
+  createdAt       DateTime         @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt       DateTime?        @map("deleted_at") @db.DateTime(3)
+  stores          StoreCommunity[]
+
+  @@unique([city, district, name], map: "uk_communities_location_name")
+  @@index([status, deletedAt, sortOrder], map: "idx_communities_list")
+  @@map("communities")
+}
+
+model Store {
+  id                       String            @id @default(cuid()) @db.VarChar(30)
+  name                     String            @db.VarChar(120)
+  logoUrl                  String?           @map("logo_url") @db.VarChar(1024)
+  coverUrl                 String?           @map("cover_url") @db.VarChar(1024)
+  description              String?           @db.Text
+  announcement             String?           @db.Text
+  phone                    String            @db.VarChar(32)
+  address                  String            @db.VarChar(255)
+  businessStartTime        String            @default("08:00") @map("business_start_time") @db.Char(5)
+  businessEndTime          String            @default("22:00") @map("business_end_time") @db.Char(5)
+  minimumOrderAmount       Decimal           @default(0) @map("minimum_order_amount") @db.Decimal(10, 2)
+  defaultDeliveryFee       Decimal           @default(0) @map("default_delivery_fee") @db.Decimal(10, 2)
+  estimatedDeliveryMinutes Int               @default(45) @map("estimated_delivery_minutes") @db.UnsignedSmallInt
+  status                   StoreStatus       @default(OPEN)
+  sortOrder                Int               @default(0) @map("sort_order")
+  createdAt                DateTime          @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt                DateTime          @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt                DateTime?         @map("deleted_at") @db.DateTime(3)
+  communities              StoreCommunity[]
+  categories               ProductCategory[]
+  products                 Product[]
+
+  @@index([status, deletedAt, sortOrder], map: "idx_stores_list")
+  @@index([name], map: "idx_stores_name")
+  @@map("stores")
+}
+
+model StoreCommunity {
+  storeId                          String               @map("store_id") @db.VarChar(30)
+  communityId                      String               @map("community_id") @db.VarChar(30)
+  status                           StoreCommunityStatus @default(ACTIVE)
+  minimumOrderAmountOverride       Decimal?             @map("minimum_order_amount_override") @db.Decimal(10, 2)
+  deliveryFeeOverride              Decimal?             @map("delivery_fee_override") @db.Decimal(10, 2)
+  estimatedDeliveryMinutesOverride Int?                 @map("estimated_delivery_minutes_override") @db.UnsignedSmallInt
+  createdAt                        DateTime             @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt                        DateTime             @updatedAt @map("updated_at") @db.DateTime(3)
+  store                            Store                @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  community                        Community            @relation(fields: [communityId], references: [id], onDelete: Restrict)
+
+  @@id([storeId, communityId])
+  @@index([communityId, status], map: "idx_store_communities_community_status")
+  @@index([storeId, status], map: "idx_store_communities_store_status")
+  @@map("store_communities")
+}
+
+model ProductCategory {
+  id        String       @id @default(cuid()) @db.VarChar(30)
+  storeId   String       @map("store_id") @db.VarChar(30)
+  name      String       @db.VarChar(80)
+  status    EnableStatus @default(ENABLED)
+  sortOrder Int          @default(0) @map("sort_order")
+  createdAt DateTime     @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt DateTime     @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt DateTime?    @map("deleted_at") @db.DateTime(3)
+  store     Store        @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  products  Product[]
+
+  @@unique([storeId, name], map: "uk_product_categories_store_name")
+  @@index([storeId, status, deletedAt, sortOrder], map: "idx_product_categories_list")
+  @@map("product_categories")
+}
+
+model Product {
+  id                    String          @id @default(cuid()) @db.VarChar(30)
+  storeId               String          @map("store_id") @db.VarChar(30)
+  categoryId            String          @map("category_id") @db.VarChar(30)
+  name                  String          @db.VarChar(120)
+  mainImageUrl          String?         @map("main_image_url") @db.VarChar(1024)
+  galleryImageUrls      Json?           @map("gallery_image_urls")
+  description           String?         @db.VarChar(500)
+  detail                String?         @db.LongText
+  afterSaleNotes        String?         @map("after_sale_notes") @db.Text
+  remark                String?         @db.VarChar(500)
+  price                 Decimal         @db.Decimal(10, 2)
+  originalPrice         Decimal?        @map("original_price") @db.Decimal(10, 2)
+  stock                 Int             @default(0) @db.UnsignedInt
+  salesVolume           Int             @default(0) @map("sales_volume") @db.UnsignedInt
+  purchaseLimit         Int?            @map("purchase_limit") @db.UnsignedInt
+  stockWarningThreshold Int             @default(10) @map("stock_warning_threshold") @db.UnsignedInt
+  isHot                 Boolean         @default(false) @map("is_hot")
+  status                ProductStatus   @default(OFF_SHELF)
+  sortOrder             Int             @default(0) @map("sort_order")
+  createdAt             DateTime        @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt             DateTime        @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt             DateTime?       @map("deleted_at") @db.DateTime(3)
+  store                 Store           @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  category              ProductCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@index([storeId, categoryId, status, deletedAt, sortOrder], map: "idx_products_store_category_list")
+  @@index([storeId, status, deletedAt, sortOrder], map: "idx_products_store_list")
+  @@index([storeId, name], map: "idx_products_store_name")
+  @@map("products")
+}

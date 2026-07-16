@@ -1,0 +1,22 @@
+{
+  "pages": [
+    {
+      "path": "pages/home/index",
+      "style": {
+        "navigationBarTitleText": "近邻小铺子"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f3f7f5",
+    "usingComponents": {
+      "van-button": "/wxcomponents/vant/button/index",
+      "van-empty": "/wxcomponents/vant/empty/index",
+      "van-loading": "/wxcomponents/vant/loading/index",
+      "van-notice-bar": "/wxcomponents/vant/notice-bar/index",
+      "van-tag": "/wxcomponents/vant/tag/index"
+    }
+  }
+}

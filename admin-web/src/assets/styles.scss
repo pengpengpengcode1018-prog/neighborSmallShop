@@ -1,0 +1,115 @@
+:root {
+  color: #24302b;
+  background: #f4f7f5;
+  font-family:
+    Inter,
+    'PingFang SC',
+    'Microsoft YaHei',
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.app-sidebar {
+  background: #ffffff;
+  border-right: 1px solid #e6ece8;
+}
+
+.brand {
+  padding: 24px 20px 18px;
+  color: #176b4d;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border-bottom: 1px solid #e6ece8;
+  font-weight: 600;
+}
+
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.page-heading h1,
+.login-card h1 {
+  margin: 4px 0 8px;
+}
+
+.page-heading p,
+.module-grid p {
+  color: #64716b;
+}
+
+.eyebrow {
+  margin: 0;
+  color: #278661;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.module-grid {
+  margin-top: 20px;
+}
+
+.module-grid h2 {
+  margin-top: 0;
+  font-size: 18px;
+}
+
+.login-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+  background: radial-gradient(circle at top left, rgb(61 164 119 / 16%), transparent 36%), #f4f7f5;
+}
+
+.login-card {
+  width: min(420px, 100%);
+}
+
+.login-card .el-alert,
+.login-card .el-form {
+  margin-top: 24px;
+}
+
+.full-width {
+  width: 100%;
+}

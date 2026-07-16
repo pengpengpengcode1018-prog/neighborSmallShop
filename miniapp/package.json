@@ -1,0 +1,34 @@
+{
+  "name": "@nearby-shop/miniapp",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:mp-weixin": "npm run sync:vant && uni -p mp-weixin",
+    "build": "npm run build:mp-weixin",
+    "build:mp-weixin": "npm run sync:vant && uni build -p mp-weixin",
+    "lint": "eslint src scripts vite.config.ts",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.json",
+    "sync:vant": "node scripts/sync-vant.mjs",
+    "postinstall": "npm run sync:vant"
+  },
+  "dependencies": {
+    "@dcloudio/uni-app": "3.0.0-5010520260709002",
+    "@dcloudio/uni-components": "3.0.0-5010520260709002",
+    "@dcloudio/uni-mp-weixin": "3.0.0-5010520260709002",
+    "@vant/weapp": "1.11.7",
+    "pinia": "2.2.4",
+    "vue": "3.4.21"
+  },
+  "devDependencies": {
+    "@dcloudio/types": "3.4.31",
+    "@dcloudio/uni-cli-shared": "3.0.0-5010520260709002",
+    "@dcloudio/vite-plugin-uni": "3.0.0-5010520260709002",
+    "@types/wechat-miniprogram": "^3.4.10",
+    "@vue/runtime-core": "3.4.21",
+    "@vue/tsconfig": "^0.9.1",
+    "sass": "^1.101.0",
+    "typescript": "~5.9.3",
+    "vite": "5.2.8",
+    "vue-tsc": "^3.3.7"
+  }
+}
