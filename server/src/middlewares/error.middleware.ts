@@ -29,15 +29,17 @@ export const errorMiddleware: Middleware<AppState> = async (ctx, next) => {
       httpError?.code ?? ERROR_CODES.INTERNAL_ERROR,
       httpError?.message ?? '服务暂时不可用',
     );
-    logger.error(
-      {
-        err: error,
-        method: ctx.method,
-        path: ctx.path,
-        requestId: ctx.state.requestId,
-        status: ctx.status,
-      },
-      'request failed',
-    );
+    const context = {
+      code: httpError?.code,
+      method: ctx.method,
+      path: ctx.path,
+      requestId: ctx.state.requestId,
+      status: ctx.status,
+    };
+    if (httpError && httpError.status < 500) {
+      logger.warn(context, 'request rejected');
+    } else {
+      logger.error({ ...context, err: error }, 'request failed');
+    }
   }
 };

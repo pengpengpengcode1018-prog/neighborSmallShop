@@ -1,0 +1,158 @@
+name: nearby-shop-production
+
+x-server-environment: &server-environment
+  NODE_ENV: production
+  PORT: 3000
+  DATABASE_URL: ${DATABASE_URL:?RDS DATABASE_URL is required}
+  REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
+  JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+  TRUST_PROXY: 'true'
+  RATE_LIMIT_ENABLED: 'true'
+  RATE_LIMIT_WINDOW_MS: 60000
+  RATE_LIMIT_MAX_REQUESTS: 600
+  AUTH_RATE_LIMIT_MAX_REQUESTS: 20
+  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://www.surroundsmallshops.com}
+  EXPIRED_ORDER_JOB_ENABLED: 'true'
+  NOTIFICATION_JOB_ENABLED: 'true'
+  WECHAT_APP_ID: ${WECHAT_APP_ID:?WECHAT_APP_ID is required}
+  WECHAT_APP_SECRET: ${WECHAT_APP_SECRET:?WECHAT_APP_SECRET is required}
+  WECHAT_MCH_ID: ${WECHAT_MCH_ID:-}
+  WECHAT_PAY_MERCHANT_SERIAL_NO: ${WECHAT_PAY_MERCHANT_SERIAL_NO:-}
+  WECHAT_PAY_PRIVATE_KEY: ${WECHAT_PAY_PRIVATE_KEY:-}
+  WECHAT_PAY_API_V3_KEY: ${WECHAT_PAY_API_V3_KEY:-}
+  WECHAT_PAY_PUBLIC_KEY_ID: ${WECHAT_PAY_PUBLIC_KEY_ID:-}
+  WECHAT_PAY_PUBLIC_KEYS_JSON: ${WECHAT_PAY_PUBLIC_KEYS_JSON:-}
+  WECHAT_PAY_NOTIFY_URL: ${WECHAT_PAY_NOTIFY_URL:-}
+  WECHAT_PAY_REFUND_NOTIFY_URL: ${WECHAT_PAY_REFUND_NOTIFY_URL:-}
+  WECHAT_SUBSCRIBE_TEMPLATES_JSON: ${WECHAT_SUBSCRIBE_TEMPLATES_JSON:-{}}
+  WECHAT_MINIPROGRAM_STATE: ${WECHAT_MINIPROGRAM_STATE:-developer}
+
+services:
+  redis:
+    image: redis:7.4-alpine
+    user: redis
+    command:
+      [
+        'sh',
+        '-c',
+        'exec redis-server --appendonly yes --appendfsync everysec --requirepass "$$REDIS_PASSWORD" --maxmemory 256mb --maxmemory-policy noeviction',
+      ]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    expose:
+      - '6379'
+    volumes:
+      - production-redis-data:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli ping | grep PONG']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    mem_limit: 384m
+    pids_limit: 128
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - backend
+
+  migrate:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+      target: migrate
+      network: host
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${MIGRATION_DATABASE_URL:?RDS migration DATABASE_URL is required}
+    restart: 'no'
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - frontend
+
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+      target: runtime
+      network: host
+    environment: *server-environment
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    expose:
+      - '3000'
+    ports:
+      - 127.0.0.1:${PRODUCTION_API_PORT:-3100}:3000
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/api/v1/health').then((response)=>{if(!response.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - frontend
+      - backend
+
+  admin-web:
+    build:
+      context: .
+      dockerfile: admin-web/Dockerfile
+      target: runtime
+      network: host
+      args:
+        VITE_API_BASE_URL: ${ADMIN_API_BASE_URL:-https://api.surroundsmallshops.com/api/v1}
+    depends_on:
+      server:
+        condition: service_healthy
+    ports:
+      - 127.0.0.1:${PRODUCTION_HTTP_PORT:-8080}:8080
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:8080/']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - frontend
+      - backend
+
+networks:
+  frontend:
+  backend:
+    internal: true
+
+volumes:
+  production-redis-data:

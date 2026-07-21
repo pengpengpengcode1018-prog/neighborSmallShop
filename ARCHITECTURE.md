@@ -16,29 +16,41 @@
 | `server/`      | 鉴权、业务规则、交易、数据与外部集成 | `src/app.ts`、`src/server.ts` | Koa、Prisma、Redis  |
 | `compose.yaml` | 本地 MySQL 与 Redis                  | Docker Compose                | MySQL 8、Redis      |
 
+## 生产候选域名与入口
+
+| 公网入口                             | 职责                          | 宿主机反向代理目标 | 容器入口         |
+| ------------------------------------ | ----------------------------- | ------------------ | ---------------- |
+| `https://api.surroundsmallshops.com` | 小程序 API、微信支付/退款回调 | `127.0.0.1:3110`   | `server:3000`    |
+| `https://www.surroundsmallshops.com` | 管理后台 SPA                  | `127.0.0.1:8180`   | `admin-web:8080` |
+
+- MySQL 和 Redis 不绑定宿主机公网端口；API 与后台只绑定 loopback，由宿主 Nginx 终止 TLS。
+- 管理后台生产构建直接请求 `api` 域名；服务端 CORS 只回显精确允许的 `www` Origin，不允许 `*`。
+- `www` 和 `api` 的健康证据必须同时匹配本仓库页面标题与 `{ code, message, data }` API 契约，HTTP 200 本身不代表部署正确。
+
 ## 领域地图
 
-| 领域         | 服务端边界                         | 客户端入口           | 规格                      |
-| ------------ | ---------------------------------- | -------------------- | ------------------------- |
-| 身份与权限   | `auth`、`users`、`admins`          | 登录、个人中心       | `overview-and-scope.md`   |
-| 配送地域     | `communities`、`store_communities` | 小区选择、配送范围   | `shopping-journey.md`     |
-| 店铺与商品   | `stores`、`categories`、`products` | 首页、店铺、商品     | `shopping-journey.md`     |
-| 购物车与地址 | `cart`、`addresses`                | 购物车、地址         | `shopping-journey.md`     |
-| 订单与库存   | `orders`、`order_items`、状态日志  | 下单、订单、后台订单 | `order-lifecycle.md`      |
-| 支付与退款   | `payments`、`refunds`、微信适配器  | 支付、退款           | `payments-and-refunds.md` |
-| 运营治理     | 统计、公告、配置、操作日志         | 看板、系统管理       | `admin-operations.md`     |
+| 领域           | 服务端边界                                              | 客户端入口                     | 规格                          |
+| -------------- | ------------------------------------------------------- | ------------------------------ | ----------------------------- |
+| 身份与权限     | `auth`、`users`、`admins`、微信身份/手机号 provider     | 微信登录、手机号授权、居民用户 | `overview-and-scope.md`       |
+| 配送地域与时间 | `communities`、`store_communities`、`delivery_slots`    | 小区选择、配送范围与时段       | `shopping-journey.md`         |
+| 店铺与商品     | `stores`、`categories`、`products`                      | 首页、店铺、商品               | `shopping-journey.md`         |
+| 购物车与地址   | `cart`、`addresses`                                     | 购物车、地址                   | `shopping-journey.md`         |
+| 订单与库存     | `orders`、`order_items`、状态日志、超时关单 job         | 下单、订单、后台订单           | `order-lifecycle.md`          |
+| 支付与退款     | `payments`、`refunds`、通知审计与微信支付/退款 provider | 支付、退款                     | `payments-and-refunds.md`     |
+| 通知与提醒     | 订阅授权、消息 outbox、微信消息 provider、后台提醒 job  | 通知设置、提醒中心             | `notifications-and-alerts.md` |
+| 运营治理       | 统计、公告、配置、操作日志                              | 看板、系统管理                 | `admin-operations.md`         |
 
 ## 服务端分层
 
 固定依赖方向：
 
-`Types/Constants -> Config -> Repository -> Service -> Controller/Middleware/Job -> Route -> App`
+`Types/Constants -> Config -> Repository/Provider -> Service -> Controller/Middleware/Job -> Route -> App`
 
 - Route 只组合路径、中间件与 Controller。
 - Controller 只解析输入、调用 Service、映射响应。
 - Service 承担事务、状态机、金额、库存和授权规则。
 - Repository 封装 Prisma/Redis 读写，不返回未经边界处理的外部输入。
-- 微信支付、对象存储、消息发送通过 provider/adapter 接入。
+- Provider 封装微信、对象存储、消息等外部系统；Service 只依赖稳定契约，不接触外部原始响应。
 - `npm run verify:architecture` 机械检查低层导入高层的违规边。
 
 ## 跨端契约
@@ -54,12 +66,16 @@
 
 - 一个购物车和一个订单只能属于一家店铺。
 - 地址小区必须在店铺配送范围内；店铺状态、起送价和时间段容量均由服务端校验。
-- 创建订单在事务中锁定库存；取消或超时只允许恢复一次。
-- 支付回调验签、验金额并幂等；累计退款不超过实付金额。
-- 订单、支付、退款和审计记录不可物理删除；店铺、商品、分类、小区和地址软删除。
+- 创建订单在事务中按居民串行幂等请求、按预约时段串行容量校验，并以库存下限条件更新阻止超卖；取消或超时只允许恢复一次。
+- 支付回调先对原始请求体验签再解密，验商户/订单/金额后以订单行锁幂等入账；累计退款不超过实付金额。
+- 第一版每单最多一笔服务端实付金额整单退款；申请、审核和微信终态按订单/退款行锁串行，只有可信 `SUCCESS` 恢复一次库存并扣回一次销量。
+- 居民取消、后台关闭和超时任务共用“数据库短事务领取 -> 微信查单/关单 -> 数据库终态提交”协议；外部结果未知时不释放库存，过期租约可在进程重启后恢复。
+- 订阅消息以订单状态日志 ID 作为稳定事件源，短事务领取 outbox 并预占一次报告授权后调用微信；外部结果未知进入终态且不自动重试。消息与后台提醒都是派生状态，不能反向修改订单、退款或库存。
+- 订单、支付、退款和审计记录不可物理删除；店铺、商品、分类、小区和地址软删除。后台写审计统一经过字段白名单，列表不加载 diff，详情再次去敏。
+- 微信手机号只能由居民点击原生授权按钮后，以一次性动态 code 经服务端 provider 换取；客户端号码不作为绑定依据。绑定号码全局唯一，本人资料可返回完整号码用于地址预填，后台居民查询只返回脱敏号码且不返回 OpenID/UnionID。
 
 ## 当前热点
 
-- 微信登录、支付、退款和订阅消息尚未接入真实平台凭证。
-- 订单并发、库存条件更新和回调幂等在实现前必须先写集成测试计划。
+- 微信身份登录、显式手机号授权、地址预填与后台脱敏居民列表已在正式体验版完成真机闭环；微信隐私保护指引和订阅消息真实模板仍是发布门禁。
+- 订单预览、幂等创建、库存/预约容量并发、支付/退款、微信安全关单、后台履约、订阅 outbox、后台提醒、经营指标及操作日志已具备集成测试；批准的 ¥0.01 真实支付与原路退款闭环已通过，真实平台公钥轮换、备份恢复、生产告警和根构建链依赖风险仍是发布门禁。
 - Vant Weapp 是微信原生组件，只验证 `mp-weixin` 目标，不宣称全端兼容。

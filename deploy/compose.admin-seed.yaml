@@ -1,0 +1,7 @@
+services:
+  migrate:
+    environment:
+      - DATABASE_URL=${DATABASE_URL:?RDS application DATABASE_URL is required}
+      - ADMIN_SEED_USERNAME
+      - ADMIN_SEED_DISPLAY_NAME
+      - ADMIN_SEED_PASSWORD

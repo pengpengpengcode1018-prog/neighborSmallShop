@@ -13,6 +13,8 @@
     "dev:admin": "npm run dev --workspace @nearby-shop/admin-web",
     "dev:miniapp": "npm run dev:mp-weixin --workspace @nearby-shop/miniapp",
     "dev:server": "npm run dev --workspace @nearby-shop/server",
+    "db:migrate": "npm run db:migrate --workspace @nearby-shop/server",
+    "db:seed": "npm run db:seed --workspace @nearby-shop/server",
     "infra:up": "docker compose up -d mysql redis",
     "infra:down": "docker compose down",
     "lint": "npm run lint --workspaces --if-present",
@@ -24,7 +26,13 @@
     "verify:docs": "node scripts/validate-docs.mjs",
     "verify:architecture": "node scripts/check-architecture.mjs",
     "verify:infra": "docker compose config --quiet",
-    "verify": "npm run verify:docs && npm run verify:architecture && npm run verify:infra && npm run lint && npm run typecheck && npm run test && npm run build && npm run format:check"
+    "verify:release": "node scripts/check-release-safety.mjs",
+    "release:rehearse": "node scripts/rehearse-release.mjs",
+    "release:audit": "npm audit --omit=dev --audit-level=high",
+    "release:audit:runtime": "npm audit --omit=peer --audit-level=moderate --prefix server/runtime",
+    "runtime:lock": "npm install --package-lock-only --omit=peer --ignore-scripts --prefix server/runtime",
+    "admin:lock": "npm install --package-lock-only --ignore-scripts --workspaces=false --prefix admin-web",
+    "verify": "npm run verify:docs && npm run verify:architecture && npm run verify:infra && npm run verify:release && npm run lint && npm run typecheck && npm run test && npm run build && npm run format:check"
   },
   "engines": {
     "node": ">=22.0.0",

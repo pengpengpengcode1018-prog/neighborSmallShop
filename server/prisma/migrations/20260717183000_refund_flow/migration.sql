@@ -1,0 +1,57 @@
+ALTER TABLE `orders`
+  ADD COLUMN `refunded_at` DATETIME(3) NULL AFTER `cancelled_at`;
+
+CREATE TABLE `refunds` (
+  `id` VARCHAR(30) NOT NULL,
+  `refund_no` VARCHAR(64) NOT NULL,
+  `order_id` VARCHAR(30) NOT NULL,
+  `payment_id` VARCHAR(30) NOT NULL,
+  `user_id` VARCHAR(30) NOT NULL,
+  `request_id` VARCHAR(64) NOT NULL,
+  `request_fingerprint` CHAR(64) NOT NULL,
+  `status` ENUM('pending_review', 'approved', 'rejected', 'processing', 'success', 'failed') NOT NULL DEFAULT 'pending_review',
+  `amount` DECIMAL(10, 2) NOT NULL,
+  `currency` CHAR(3) NOT NULL DEFAULT 'CNY',
+  `reason` VARCHAR(32) NOT NULL,
+  `user_note` VARCHAR(200) NULL,
+  `review_note` VARCHAR(255) NULL,
+  `reviewed_by_admin_id` VARCHAR(30) NULL,
+  `reviewed_at` DATETIME(3) NULL,
+  `provider_refund_id` VARCHAR(32) NULL,
+  `provider_status` VARCHAR(32) NULL,
+  `failure_reason` VARCHAR(64) NULL,
+  `apply_attempt_count` SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  `last_apply_attempt_at` DATETIME(3) NULL,
+  `last_queried_at` DATETIME(3) NULL,
+  `provider_accepted_at` DATETIME(3) NULL,
+  `completed_at` DATETIME(3) NULL,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `uk_refunds_refund_no` (`refund_no`),
+  UNIQUE INDEX `uk_refunds_order` (`order_id`),
+  UNIQUE INDEX `uk_refunds_payment` (`payment_id`),
+  UNIQUE INDEX `uk_refunds_provider_refund_id` (`provider_refund_id`),
+  UNIQUE INDEX `uk_refunds_user_request` (`user_id`, `request_id`),
+  INDEX `idx_refunds_status_time` (`status`, `created_at`),
+  INDEX `idx_refunds_order_status` (`order_id`, `status`),
+  CONSTRAINT `refunds_order_id_fkey` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `refunds_payment_id_fkey` FOREIGN KEY (`payment_id`) REFERENCES `payments` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `refunds_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `refunds_reviewed_by_admin_id_fkey` FOREIGN KEY (`reviewed_by_admin_id`) REFERENCES `admins` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE `refund_notifications` (
+  `id` VARCHAR(30) NOT NULL,
+  `refund_id` VARCHAR(30) NOT NULL,
+  `notification_id` VARCHAR(64) NOT NULL,
+  `event_type` VARCHAR(64) NOT NULL,
+  `payload_digest` CHAR(64) NOT NULL,
+  `provider_status` VARCHAR(32) NOT NULL,
+  `outcome` ENUM('processed', 'already_processed') NOT NULL,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `uk_refund_notifications_external` (`notification_id`),
+  INDEX `idx_refund_notifications_refund_time` (`refund_id`, `created_at`),
+  CONSTRAINT `refund_notifications_refund_id_fkey` FOREIGN KEY (`refund_id`) REFERENCES `refunds` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

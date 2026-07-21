@@ -1,0 +1,40 @@
+CREATE TABLE `payments` (
+  `id` VARCHAR(30) NOT NULL,
+  `order_id` VARCHAR(30) NOT NULL,
+  `out_trade_no` VARCHAR(32) NOT NULL,
+  `provider` VARCHAR(16) NOT NULL DEFAULT 'WECHAT',
+  `status` ENUM('creating', 'pending', 'success', 'failed', 'closed') NOT NULL DEFAULT 'creating',
+  `amount` DECIMAL(10, 2) NOT NULL,
+  `currency` CHAR(3) NOT NULL DEFAULT 'CNY',
+  `prepay_id` VARCHAR(64) NULL,
+  `transaction_id` VARCHAR(32) NULL,
+  `trade_state` VARCHAR(32) NULL,
+  `failure_reason` VARCHAR(64) NULL,
+  `prepay_expires_at` DATETIME(3) NULL,
+  `succeeded_at` DATETIME(3) NULL,
+  `last_queried_at` DATETIME(3) NULL,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` DATETIME(3) NOT NULL,
+  UNIQUE INDEX `uk_payments_order` (`order_id`),
+  UNIQUE INDEX `uk_payments_out_trade_no` (`out_trade_no`),
+  UNIQUE INDEX `uk_payments_transaction_id` (`transaction_id`),
+  INDEX `idx_payments_status_time` (`status`, `updated_at`),
+  PRIMARY KEY (`id`),
+  CONSTRAINT `fk_payments_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE `payment_notifications` (
+  `id` VARCHAR(30) NOT NULL,
+  `payment_id` VARCHAR(30) NOT NULL,
+  `notification_id` VARCHAR(64) NOT NULL,
+  `source` ENUM('notify', 'query') NOT NULL,
+  `event_type` VARCHAR(64) NOT NULL,
+  `payload_digest` CHAR(64) NOT NULL,
+  `transaction_id` VARCHAR(32) NOT NULL,
+  `outcome` ENUM('processed', 'already_processed') NOT NULL,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  UNIQUE INDEX `uk_payment_notifications_external` (`notification_id`),
+  INDEX `idx_payment_notifications_payment_time` (`payment_id`, `created_at`),
+  PRIMARY KEY (`id`),
+  CONSTRAINT `fk_payment_notifications_payment` FOREIGN KEY (`payment_id`) REFERENCES `payments` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

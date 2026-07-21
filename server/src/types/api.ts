@@ -10,8 +10,32 @@ export interface ApiFailure {
   data: null;
 }
 
+export interface PublicCommunity {
+  id: string;
+  name: string;
+  city: string;
+  district: string;
+  detailedAddress: string;
+}
+
+export interface PublicUser {
+  id: string;
+  nickname: string | null;
+  avatarUrl: string | null;
+  phone: string | null;
+  phoneBound: boolean;
+  currentCommunity: PublicCommunity | null;
+}
+
 export interface AppState {
   requestId?: string;
+  admin?: {
+    id: string;
+    username: string;
+    displayName: string;
+    role: 'PLATFORM_ADMIN';
+  };
+  user?: PublicUser;
 }
 
 export function success<T>(data: T): ApiSuccess<T> {

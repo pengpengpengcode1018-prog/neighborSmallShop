@@ -1,7 +1,15 @@
 <script lang="ts">
+import { useCommunityStore } from './stores/community';
+import { useCartStore } from './stores/cart';
+import { useUserStore } from './stores/user';
+
 export default {
   onLaunch() {
-    // Platform integrations are intentionally deferred to their execution plans.
+    void useCommunityStore().loadCommunities();
+    const userStore = useUserStore();
+    void userStore.restoreSession().then(() => {
+      if (userStore.accessToken) void useCartStore().load(userStore.accessToken);
+    });
   },
 };
 </script>

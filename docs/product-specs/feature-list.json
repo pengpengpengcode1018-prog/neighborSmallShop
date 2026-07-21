@@ -1,6 +1,6 @@
 {
   "$schema": "./feature-list.schema.json",
-  "updatedAt": "2026-07-15",
+  "updatedAt": "2026-07-21",
   "features": [
     {
       "id": "foundation-repository",
@@ -11,14 +11,18 @@
       "userVisibleBehavior": "开发者可用统一命令安装、验证并启动 API、后台和小程序编译。",
       "status": "passing",
       "sourcePages": [2, 3, 4, 43, 44, 45, 49, 51],
-      "verification": ["./init.sh", "GET /api/v1/health 返回 code=0"],
+      "verification": [
+        "./init.sh",
+        "GET /api/v1/health 返回 code=0",
+        "GET /api/v1/ready 验证 MySQL 与 Redis"
+      ],
       "evidence": [
-        "2026-07-15 npm run verify 全部通过",
-        "server/tests/health.test.ts：2 个 API baseline 测试通过",
-        "GET http://127.0.0.1:3100/api/v1/health：HTTP 200、code=0",
+        "2026-07-16 npm run verify 全部通过，共 18 个服务端测试",
+        "server/tests/health.test.ts：liveness、readiness、依赖失败隔离和统一 404 共 4 个测试通过",
+        "构建产物在 3100 端口冷启动；/health 与 /ready 均为 HTTP 200，MySQL/Redis 均 ready，停止后端口释放",
         "admin-web、miniapp/mp-weixin、server 三端生产构建通过"
       ],
-      "notes": "初始化计划已归档；业务功能仍按后续计划逐项实现"
+      "notes": "初始化与第一阶段管理基础计划已归档；业务功能仍按后续计划逐项实现"
     },
     {
       "id": "admin-auth",
@@ -27,10 +31,13 @@
       "area": "identity",
       "title": "后台管理员登录与授权",
       "userVisibleBehavior": "启用的管理员可登录；禁用或无权限账号不能访问受保护页面。",
-      "status": "not_started",
+      "status": "passing",
       "sourcePages": [5, 22, 29, 30, 47, 49, 51],
       "verification": ["登录 API 集成测试", "后台登录与越权 E2E"],
-      "evidence": []
+      "evidence": [
+        "server/tests/admin-auth.test.ts：成功登录/会话、输入与未授权、账号隐藏/禁用、五次失败锁定共 4 条集成测试通过",
+        "2026-07-16 浏览器旅程：未登录守卫、错误密码提示、成功进入受保护工作台、管理员展示和退出登录通过"
+      ]
     },
     {
       "id": "community-admin",
@@ -39,10 +46,13 @@
       "area": "delivery-area",
       "title": "配送小区管理",
       "userVisibleBehavior": "管理员可分页创建、编辑、启停和软删除配送小区。",
-      "status": "not_started",
+      "status": "passing",
       "sourcePages": [5, 23, 24, 47, 49, 51],
       "verification": ["小区 CRUD API 集成测试", "后台列表与表单 E2E"],
-      "evidence": []
+      "evidence": [
+        "server/tests/community-admin.test.ts：未授权/校验、分页筛选/重复冲突、编辑/启停/软删除/审计共 3 组集成测试通过",
+        "2026-07-16 浏览器旅程：小区列表空状态、新建、编辑地址和停用状态通过"
+      ]
     },
     {
       "id": "store-admin",
@@ -51,10 +61,14 @@
       "area": "catalog",
       "title": "店铺与配送范围管理",
       "userVisibleBehavior": "管理员可维护店铺、营业状态、起送额、配送费及多个配送小区。",
-      "status": "not_started",
+      "status": "passing",
       "sourcePages": [1, 23, 25, 35, 47, 49, 51, 52],
       "verification": ["店铺和关联表事务测试", "后台店铺旅程 E2E"],
-      "evidence": []
+      "evidence": [
+        "server/tests/store-admin.test.ts：无效配送范围事务回滚、金额字符串、分页、范围原子替换、状态、软删除和审计共 3 组集成测试通过",
+        "2026-07-16 浏览器 smoke：店铺登录守卫、空列表、新建表单、金额/营业时间/配送小区字段可用",
+        "2026-07-16 浏览器黄金旅程：关联阳光花园创建近邻便利店、金额展示、编辑配送费和暂停营业通过"
+      ]
     },
     {
       "id": "catalog-admin",
@@ -63,10 +77,13 @@
       "area": "catalog",
       "title": "商品分类与单规格商品管理",
       "userVisibleBehavior": "管理员可在店铺下维护分类、商品、价格、库存和上下架状态。",
-      "status": "not_started",
+      "status": "passing",
       "sourcePages": [5, 24, 25, 35, 47, 49, 51, 52],
       "verification": ["分类/商品 CRUD 与软删除测试", "后台商品旅程 E2E"],
-      "evidence": []
+      "evidence": [
+        "server/tests/catalog-admin.test.ts：重复分类、跨店/零库存上架约束、价格字符串、筛选编辑、删除顺序、软删除和审计共 4 组集成测试通过",
+        "2026-07-16 浏览器黄金旅程：近邻便利店下创建饮料分类与矿泉水，编辑价格为 2.80、库存 80、状态在售并正确回填"
+      ]
     },
     {
       "id": "delivery-slots-admin",
@@ -75,10 +92,14 @@
       "area": "delivery",
       "title": "配送时间和容量配置",
       "userVisibleBehavior": "管理员可为店铺配置尽快送达、预约时段和订单上限。",
-      "status": "not_started",
+      "status": "passing",
       "sourcePages": [14, 15, 26, 27, 47, 49, 52],
-      "verification": ["重叠/容量规则测试", "后台配置 E2E"],
-      "evidence": []
+      "verification": ["重复时刻/截止时间/容量规则测试", "后台配置 E2E"],
+      "evidence": [
+        "20260716084500_delivery_slots migration 已应用：店铺双配送方式开关与每日配送时段表就绪",
+        "server/tests/delivery-slots-admin.test.ts：授权、双方式约束、截止时间/容量、重复时刻、跨店、编辑/停用和审计共 4 组集成测试通过",
+        "2026-07-16 浏览器黄金旅程：配送方式保存、08:00 时段创建、编辑为 09:00/容量 30/排序 5、停用及正确回填通过；开关可访问名称已复验"
+      ]
     },
     {
       "id": "wechat-login",
@@ -87,10 +108,17 @@
       "area": "identity",
       "title": "微信登录与用户会话",
       "userVisibleBehavior": "居民使用微信身份进入小程序并安全恢复会话。",
-      "status": "not_started",
+      "status": "passing",
       "sourcePages": [2, 3, 5, 8, 39, 47, 49],
-      "verification": ["微信适配器契约测试", "开发者工具登录验证"],
-      "evidence": []
+      "verification": ["微信适配器契约测试", "小程序会话 store 测试与 mp-weixin 构建"],
+      "evidence": [
+        "20260716130000_user_auth migration 已应用：居民稳定微信身份、可选资料、账号状态与去敏登录审计就绪",
+        "server/tests/user-auth.test.ts：首次/重复登录、资料会话、无效 code、provider 故障、禁用账号、过期及管理员 token 隔离共 4 组测试通过",
+        "server/tests/wechat-identity-provider.test.ts：官方 code2Session 请求、session key 丢弃、错误归一、缺凭证/网络/格式失败共 6 项契约测试通过",
+        "miniapp/tests/user-store.test.ts：微信 code 登录、token 持久化、冷启动恢复、过期清除和故障提示共 3 项测试通过；mp-weixin 生产构建通过",
+        "2026-07-16 构建产物冷启动：health/ready 为 200；无微信凭证登录为稳定 503，响应与日志不含临时 code",
+        "2026-07-20 正式体验版真机登录通过：生产 AppSecret 经 ECS 私密环境注入，首页显示微信会话已连接且不以手机号授权为登录前提"
+      ]
     },
     {
       "id": "community-selection",
@@ -99,10 +127,15 @@
       "area": "delivery-area",
       "title": "小区选择",
       "userVisibleBehavior": "用户手动选择并记住启用的小区，后续店铺按配送范围过滤。",
-      "status": "not_started",
+      "status": "passing",
       "sourcePages": [6, 8, 9, 39, 47, 49, 52],
       "verification": ["小区接口测试", "选择/切换小区小程序验证"],
-      "evidence": []
+      "evidence": [
+        "20260716184000_user_current_community migration 已应用：居民当前小区可空关系与索引就绪",
+        "server/tests/community-selection.test.ts：公共字段/可见性、居民鉴权/校验、缺失/停用/删除、保存/资料恢复/失效清除共 6 项测试通过",
+        "miniapp/tests/community-store.test.ts：本地恢复/失效、游客保存、账号优先/空账号同步、网络失败保留共 4 项测试通过；小程序合计 7 项 store 测试",
+        "2026-07-16 mp-weixin 选择页面生产构建通过；构建产物冷启动的公共列表为 200、未授权更新为稳定 401"
+      ]
     },
     {
       "id": "store-browsing",
@@ -110,11 +143,16 @@
       "priority": 9,
       "area": "catalog",
       "title": "店铺浏览和搜索",
-      "userVisibleBehavior": "用户只看到可配送店铺，并能搜索和查看营业、起送及配送信息。",
-      "status": "not_started",
+      "userVisibleBehavior": "用户未选小区时可浏览可见店铺；选择后只看到可配送店铺，并能搜索和查看营业、起送及配送信息。",
+      "status": "passing",
       "sourcePages": [9, 10, 39, 40, 47, 49],
       "verification": ["范围/状态过滤 API 测试", "首页和搜索小程序验证"],
-      "evidence": []
+      "evidence": [
+        "server/tests/store-browsing.test.ts：游客可见性、暂停店铺、有效/暂停配送关系、小区费用覆盖、搜索分页、稳定错误和详情公开字段共 8 项集成测试通过",
+        "miniapp/tests/store-store.test.ts：首页无小区/有小区查询、搜索去空格、切换竞态、失败清空和详情上下文共 5 项状态测试通过；小程序合计 12 项测试",
+        "2026-07-16 首页店铺 loading/empty/error/retry、搜索、下拉刷新、营业状态、费用和详情页完成，mp-weixin 生产构建通过",
+        "2026-07-16 构建产物在 3001 端口冷启动：health/ready 和店铺列表为 200，无效小区为稳定 COMMUNITY_NOT_FOUND；全量 verify 通过"
+      ]
     },
     {
       "id": "product-browsing",
@@ -123,10 +161,15 @@
       "area": "catalog",
       "title": "商品分类、列表与详情",
       "userVisibleBehavior": "用户按分类浏览在售商品并查看价格、库存和详情。",
-      "status": "not_started",
+      "status": "passing",
       "sourcePages": [10, 11, 12, 39, 42, 47, 49],
       "verification": ["商品可见性 API 测试", "店铺与详情小程序验证"],
-      "evidence": []
+      "evidence": [
+        "server/tests/product-browsing.test.ts：分类/商品可见性、售罄归一、店铺配送资格、分类筛选、稳定错误、详情公开字段和分页校验共 7 项集成测试通过",
+        "miniapp/tests/product-store.test.ts：游客浏览、小区/分类上下文、分类竞态、失败清空和详情恢复共 5 项状态测试通过；小程序合计 17 项测试",
+        "2026-07-16 店铺页分类/商品区、售罄/价格/库存展示和商品轮播/详情/售后页完成，mp-weixin 生产构建通过",
+        "2026-07-16 构建产物在 3001 端口冷启动：health/ready、分类商品列表和商品详情为 200，下架/不存在错误稳定；全量 verify 通过"
+      ]
     },
     {
       "id": "single-store-cart",
@@ -135,10 +178,16 @@
       "area": "cart",
       "title": "单店铺购物车",
       "userVisibleBehavior": "用户调整数量并看到金额；切换店铺前明确确认清空。",
-      "status": "not_started",
+      "status": "passing",
       "sourcePages": [12, 13, 40, 47, 49, 52],
       "verification": ["单店约束与库存边界测试", "购物车小程序验证"],
-      "evidence": []
+      "evidence": [
+        "20260716194500_cart migration 已应用：每位居民唯一单店购物车、购物车商品唯一约束和级联清理就绪",
+        "server/tests/cart.test.ts：鉴权/小区、金额、库存/限购、店铺/配送、跨店原子替换、跨用户隔离、失效保留、并发更新和幂等清空共 8 项集成测试通过",
+        "miniapp/tests/cart-store.test.ts：服务端真相加载、确认后更新、跨店冲突保留、增删改清和网络失败恢复共 5 项状态测试通过；小程序合计 22 项测试",
+        "2026-07-16 商品列表/详情加购、CartBar、购物车 loading/empty/error/retry、数量调整、失效移除和清空确认完成，mp-weixin 生产构建通过",
+        "2026-07-16 构建产物在 3001 端口冷启动：health/ready 为 200，MySQL/Redis ready，未登录购物车为稳定 401；全量 verify 通过"
+      ]
     },
     {
       "id": "address-management",
@@ -147,10 +196,16 @@
       "area": "address",
       "title": "收货地址管理",
       "userVisibleBehavior": "用户维护地址并只能选择属于店铺配送小区的有效地址。",
-      "status": "not_started",
+      "status": "passing",
       "sourcePages": [13, 14, 40, 47, 50],
       "verification": ["地址归属和软删除测试", "地址小程序验证"],
-      "evidence": []
+      "evidence": [
+        "20260717103000_addresses migration 已应用：地址软删除、最近使用时间和数据库默认唯一键就绪",
+        "server/tests/address.test.ts：鉴权、字段/小区校验、居民隔离、默认切换、并发唯一、软删除回退和失效保留共 7 项集成测试通过",
+        "miniapp/tests/address-store.test.ts：服务端列表、增改、默认/删除、网络失败保留和退出清敏感状态共 5 项测试通过；小程序合计 27 项测试",
+        "2026-07-17 首页/购物车入口、地址列表和编辑表单完成，覆盖 loading/empty/error/retry、标签、默认、失效提示和删除确认；mp-weixin 生产构建通过",
+        "2026-07-17 构建产物在 3001 端口冷启动：health/ready 为 200，MySQL/Redis ready，未登录地址接口为稳定 401；全量 verify 通过"
+      ]
     },
     {
       "id": "order-preview-create",
@@ -159,10 +214,17 @@
       "area": "orders",
       "title": "订单预览、创建和库存锁定",
       "userVisibleBehavior": "用户看到服务端确认的价格和配送信息，并且重复提交只创建一个订单。",
-      "status": "not_started",
+      "status": "passing",
       "sourcePages": [14, 15, 16, 34, 35, 36, 40, 47, 48, 50],
       "verification": ["事务/并发/幂等集成测试", "下单小程序验证"],
-      "evidence": []
+      "evidence": [
+        "20260717130000_orders migration 已应用：订单/商品快照/状态日志、用户请求幂等键、预约容量与到期索引就绪",
+        "server/tests/order.test.ts：服务端重算、快照/清车、并发幂等、预览失效回滚、并发库存和并发预约容量共 6 项集成测试通过；服务端合计 74 项",
+        "miniapp/tests/order-store.test.ts：服务端预览、网络失败同请求重试、金额变化确认和容量恢复共 4 项状态测试通过；小程序合计 31 项",
+        "2026-07-17 地址选择、即时/预约配送、备注、金额明细、提交 loading/error/retry 与待支付成功态完成；mp-weixin 生产构建通过",
+        "2026-07-17 构建产物在 3001 端口冷启动：health/ready 为 200、MySQL/Redis ready、未登录订单预览为稳定 401；全量 verify 通过",
+        "2026-07-20 正式体验版真机以生产小区、地址和商品创建 ¥0.01 待支付订单，管理后台同步显示相同店铺、小区、金额和脱敏收货手机号"
+      ]
     },
     {
       "id": "order-status-flow",
@@ -171,10 +233,17 @@
       "area": "orders",
       "title": "订单列表、详情和状态机",
       "userVisibleBehavior": "用户和管理员看到一致状态；只允许规定的配送与退款流转。",
-      "status": "not_started",
+      "status": "passing",
       "sourcePages": [17, 18, 19, 27, 28, 32, 33, 47, 48, 50],
       "verification": ["状态机表驱动测试", "双端订单旅程 E2E"],
-      "evidence": []
+      "evidence": [
+        "20260717143000_order_status_fields migration 已应用：店铺联系快照、履约节点时间、取消原因和后台备注就绪",
+        "server/tests/order-status.test.ts：居民隔离、管理员脱敏/详情、并发取消库存只恢复一次、完整履约状态机、并发动作幂等、支付伪造/非法跳转和后台备注隔离共 7 项集成测试通过；服务端合计 81 项",
+        "miniapp/tests/order-store.test.ts：订单列表、详情、取消、网络失败保留和退出清理测试通过；小程序合计 34 项",
+        "2026-07-17 小程序订单列表/详情/时间线/待付款取消与后台筛选、详情抽屉、履约动作、备注审计完成；管理后台和 mp-weixin 生产构建通过",
+        "2026-07-17 构建产物在 3001 端口冷启动：health/ready 为 200、MySQL/Redis ready、未登录订单列表为稳定 401；全量 verify 通过",
+        "2026-07-20 正式体验版与生产管理后台双端订单可见性通过，后台列表保持居民手机号脱敏；生产定时任务在创建后 15 分钟自动取消待支付订单，双端状态和原因一致"
+      ]
     },
     {
       "id": "wechat-payment",
@@ -183,10 +252,20 @@
       "area": "payments",
       "title": "微信支付与幂等回调",
       "userVisibleBehavior": "用户安全调起微信支付；重复通知不会重复记账或增加销量。",
-      "status": "not_started",
+      "status": "passing",
       "sourcePages": [16, 17, 35, 40, 47, 48, 50],
-      "verification": ["验签/金额/重复回调测试", "微信沙箱支付验证"],
-      "evidence": []
+      "verification": ["验签/金额/重复回调测试", "真实商户支付验证（发布门禁）"],
+      "evidence": [
+        "20260717160000_wechat_payments migration 已应用：每单唯一支付记录、交易号和通知幂等审计就绪",
+        "server/tests/wechat-payment-provider.test.ts：官方 V3 请求签名、响应验签、小程序 paySign、原始回调验签、AES-256-GCM 解密及过期/错误签名契约测试通过",
+        "2026-07-20 平台公钥配置升级为 1-8 把 ID -> PEM 映射：请求携带主动公钥 ID，响应、支付通知和退款通知按 Wechatpay-Serial 精确选钥；旧/新并存、未知 ID 和 ID/签名错配均有测试，服务端全量 147 项通过",
+        "2026-07-20 生成并部署 0.1.3 ECS 配置修复候选：生产 Compose 已透传商户私钥、APIv3 密钥、主动平台公钥 ID 和平台公钥 JSON 映射；归档扫描确认未携带生产环境文件或密钥，一次性容器预检确认 ID/映射匹配、APIv3 密钥为 32 字节且私钥和主动公钥均可解析，仅重建 API 后容器 healthy、数据库与 Redis ready",
+        "2026-07-20 正式体验版完成批准的 ¥0.01 真实微信支付；居民订单详情与生产后台均显示已支付待接单，支付调起、通知验签、服务端入账和双端状态同步生产闭环通过，原始证据中的个人信息不进入公开材料",
+        "server/tests/payment.test.ts：服务端金额/OpenID、重复/并发初始化、无效通知、金额/商户/AppID、重复入账、查单恢复及支付取消竞态共 9 项集成测试通过；服务端合计 93 项",
+        "miniapp/tests/order-store.test.ts：服务端确认成功、用户取消、结果未知和支付不可用状态通过；小程序合计 38 项，mp-weixin 生产构建通过",
+        "2026-07-17 构建产物冷启动：health/ready 为 200、MySQL/Redis ready；未登录支付初始化为稳定 401，缺少通知体为稳定 400；全量 verify 通过"
+      ],
+      "notes": "批准的生产 ¥0.01 真机支付及支付通知闭环已通过；正式凭证、HTTPS notify_url 和平台公钥映射均已投入本次验收，真实平台公钥灰度轮换与生产对账监控仍是发布门禁"
     },
     {
       "id": "expired-order-close",
@@ -195,10 +274,18 @@
       "area": "orders",
       "title": "超时关单和库存恢复",
       "userVisibleBehavior": "待支付订单 15 分钟后关闭，库存只恢复一次。",
-      "status": "not_started",
+      "status": "passing",
       "sourcePages": [34, 36, 43, 48, 50, 52],
       "verification": ["定时任务重放和竞态测试", "库存一致性查询"],
-      "evidence": []
+      "evidence": [
+        "20260717170000_expired_order_close migration 已应用：支付关闭中状态、关单操作人、领取/尝试次数和完成时间就绪",
+        "server/tests/payment.test.ts：查单后关单、查询成功入账、金额不符保留库存、外部未知恢复、无支付超时、重复批次、双 worker 租约和支付回调竞态共 15 项支付集成测试通过",
+        "server/tests/wechat-payment-provider.test.ts 与 close-expired-orders-job.test.ts：签名 204 关单、交易身份校验和批次防重叠通过；服务端 18 个文件共 103 项测试通过",
+        "server/tests/order-status.test.ts：居民过期动作、管理员安全关闭和审计重放通过；miniapp/tests/order-store.test.ts：过期订单不再显示支付动作通过，小程序共 39 项测试",
+        "2026-07-17 全量 verify 通过；启用超时任务的构建产物冷启动后 health/ready 为 200、MySQL/Redis ready，未登录取消为稳定 401，停止后端口释放",
+        "2026-07-20 生产体验版 ¥0.01 待支付订单在创建 15 分钟后由超时任务自动取消；管理后台状态记录与居民订单详情均显示支付超时自动关闭"
+      ],
+      "notes": "本地以 provider fixture 验证查单/关单和竞态，未执行真实商户关单；生产独立调度、积压指标与告警已记录技术债"
     },
     {
       "id": "refund-flow",
@@ -207,10 +294,19 @@
       "area": "refunds",
       "title": "退款申请、审核和微信退款",
       "userVisibleBehavior": "用户申请退款，管理员审核，结果和失败原因可追踪且不超额。",
-      "status": "not_started",
+      "status": "passing",
       "sourcePages": [20, 28, 29, 33, 35, 42, 48, 50],
       "verification": ["累计金额/幂等/失败恢复测试", "双端退款 E2E"],
-      "evidence": []
+      "evidence": [
+        "20260717183000_refund_flow migration 已应用：每单唯一整单退款、居民请求幂等、审核/微信状态和去原文通知审计就绪",
+        "server/tests/refund.test.ts：归属/资格/服务端金额、拒绝恢复、查单/通知终态、未知结果原号重试、并发审核、外部异常、错配通知和接单竞态共 8 项通过",
+        "server/tests/wechat-payment-provider.test.ts：微信 V3 退款申请/商户退款号查询签名响应和退款通知验签解密通过；服务端共 112 项测试",
+        "miniapp/tests/order-store.test.ts：退款模糊网络失败复用原请求与详情恢复通过；小程序共 41 项，后台退款审核页与 mp-weixin 生产构建通过",
+        "2026-07-17 构建产物冷启动 health/ready 为 200，退款后台未授权为 401、无效退款通知为 400；浏览器退款路由登录守卫无控制台错误；全量 verify 通过",
+        "2026-07-20 修复微信小程序退款原因 7 项超过 showActionSheet 最多 6 项后入口无响应：改为两级菜单且失败可见，新增 5 项回归测试；全量小程序 10 个文件 52 项及 npm run verify 通过",
+        "2026-07-20 0.1.3 正式体验版完成批准的 ¥0.01 真实整单退款：居民端提交、后台审核、微信原路到账通知及居民/后台退款成功终态一致；脱敏发布材料不保留原始订单号、退款号、手机号或地址"
+      ],
+      "notes": "自动化 fixture 与批准的生产真机整单退款均已通过，正式商户凭证和 HTTPS refund notify_url 已用于本次闭环；真实平台公钥灰度轮换、退款对账监控与备份恢复仍是全局发布门禁"
     },
     {
       "id": "notifications-alerts",
@@ -219,10 +315,17 @@
       "area": "notifications",
       "title": "订阅消息与后台提醒",
       "userVisibleBehavior": "用户获得关键订单通知，后台获得新单、超时接单和库存预警。",
-      "status": "not_started",
+      "status": "passing",
       "sourcePages": [2, 4, 36, 37, 50],
       "verification": ["消息 provider 契约测试", "微信模板和后台提醒验证"],
-      "evidence": []
+      "evidence": [
+        "20260717213000_notifications_alerts 与 20260717220000_notification_source_log_cascade migrations 已应用：一次性授权回执、状态日志 outbox、发送状态和后台提醒就绪",
+        "server/tests/wechat-subscription-provider.test.ts：官方 access token/发送结构、token 刷新、43101/43108/40037/47003 和网络未知分类通过",
+        "server/tests/notification.test.ts：授权上报幂等、未知模板、事件单次投递、去敏提醒、10 分钟未接单、低库存、外部未知不重试及自动解决通过；服务端共 122 项测试",
+        "miniapp/tests/notification-store.test.ts：一次性授权配置、accept 结果保存与模板更新失败恢复通过；小程序共 44 项测试，后台提醒中心与 mp-weixin 生产构建通过",
+        "2026-07-17 全量 verify 通过；构建产物冷启动 notification job 正常，health/ready 为 200，居民订阅和后台提醒未登录均为稳定 401"
+      ],
+      "notes": "本地使用 provider fixture，未配置真实模板或发送生产消息；微信真机授权/可达率、已登录后台可视旅程、独立调度和积压/UNKNOWN 补偿仍是发布门禁"
     },
     {
       "id": "operations-dashboard-audit",
@@ -231,10 +334,17 @@
       "area": "operations",
       "title": "经营看板与操作日志",
       "userVisibleBehavior": "管理员查看有效订单指标和去敏、不可删除的操作记录。",
-      "status": "not_started",
+      "status": "passing",
       "sourcePages": [4, 5, 22, 30, 31, 38, 47, 48],
       "verification": ["统计口径和审计脱敏测试", "后台看板/日志 E2E"],
-      "evidence": []
+      "evidence": [
+        "需求说明书第 4-5、22、30-31、38、47-48 页已可视复核；上海业务日、有效支付订单、支付/退款/净额及 7/30 天趋势口径写入 admin-operations.md",
+        "20260717230000_operations_dashboard_audit migration 已应用：操作日志 request id、支付成功时间和退款完成时间索引就绪",
+        "server/tests/operations-dashboard-audit.test.ts 覆盖退款净额、上海业务日、后台权限、日志分页、不可删除及手机号/地址/Token 去敏；服务端共 125 项测试",
+        "后台经营看板、ECharts 趋势、店铺表现与操作日志筛选/详情生产构建通过；统一审计写入口只保存白名单摘要并在读取详情时再次去敏",
+        "2026-07-17 全量 verify 通过；构建产物冷启动 health/ready 为 200，看板和日志未登录均稳定返回 401"
+      ],
+      "notes": "内置浏览器无法连接本机回环地址，临时管理员已删除；已登录后台视觉黄金旅程、生产大数据量查询计划与汇总策略留作发布门禁"
     },
     {
       "id": "release-quality-gates",
@@ -242,11 +352,65 @@
       "priority": 20,
       "area": "release",
       "title": "并发、安全、隐私和部署门禁",
-      "userVisibleBehavior": "系统在重复提交、回调、越权和容器重启下仍保持交易正确并可上线。",
-      "status": "not_started",
+      "userVisibleBehavior": "系统在重复提交、回调、越权和容器重启下保持交易正确，并明确阻断未满足的上线条件。",
+      "status": "passing",
       "sourcePages": [37, 38, 48, 51],
       "verification": ["接口/并发/超卖/越权/支付退款测试", "隐私审核、HTTPS 和 Docker 部署演练"],
-      "evidence": []
+      "evidence": [
+        "需求说明书第 37-38、48、51 页已可视复核；并发、安全、隐私、日志、事务和 Docker 验收矩阵写入 release-readiness.md",
+        "server/tests/release-security.test.ts 与 server/tests/cors.test.ts 覆盖生产配置、支付多公钥配置拒绝、登录限频、request id、请求体及精确 HTTPS Origin；2026-07-20 全量服务端 147 项、小程序 52 项通过",
+        "API 与后台使用独立锁且在线审计均为 0 漏洞；API 生产镜像不含 Prisma CLI，根构建链审计仍有 9 high 并保持生产 NO-GO",
+        "npm run release:rehearse 从随机临时凭证和空卷执行 14 个迁移，验证 API/后台独立 loopback 入口、MySQL/Redis readiness、后台代理、未登录 401、只读非 root、API 重启恢复并自动清理",
+        "2026-07-17 npm run verify、npm run verify:release、npm run release:audit:runtime 和最终 Docker 演练通过",
+        "2026-07-20 正式 AppID、HTTPS 合法域名、RDS/Redis readiness、手机号真机授权与脱敏后台、¥0.01 真实支付及原路退款闭环通过；微信隐私平台配置、真实订阅模板、公钥轮换、恢复告警和依赖风险仍保持 NO-GO"
+      ],
+      "notes": "仓库门禁实现及正式身份、域名、手机号和真实资金闭环已通过；微信隐私审核、真实订阅模板、公钥轮换、备份恢复、监控告警及根构建链 high 尚未关闭，生产状态明确为 NO-GO"
+    },
+    {
+      "id": "wechat-phone-user-admin",
+      "phase": 7,
+      "priority": 21,
+      "area": "identity",
+      "title": "微信手机号授权、地址预填与后台用户列表",
+      "userVisibleBehavior": "居民首次登录后主动授权微信手机号，新建地址自动预填；管理员无需等待下单即可在后台查看脱敏居民列表。",
+      "status": "passing",
+      "sourcePages": [3, 5, 8, 13, 22, 39, 40, 47, 50, 51],
+      "verification": [
+        "微信手机号动态 code 服务端换取、绑定冲突、拒绝/重试和去敏测试",
+        "小程序首次授权、会话恢复及新增地址预填验证",
+        "后台用户列表/详情鉴权、分页筛选和隐私字段验证",
+        "正式体验版真机手机号授权与后台即时可见性验证"
+      ],
+      "evidence": [
+        "2026-07-20 服务端新增微信手机号 provider、POST /api/v1/users/phone 及唯一绑定服务；无效动态 code、token 刷新、限流/不可用、同账号重试和跨账号 409 冲突均有契约/集成测试",
+        "2026-07-20 小程序新增原生 getPhoneNumber 授权、拒绝后可重试及本人资料 phone 返回；新增地址只对空白新表单自动预填，编辑地址和手工修改值不被覆盖，对应回归测试通过",
+        "2026-07-20 后台新增居民用户只读列表/详情、关键词/状态/绑定状态/小区筛选和分页；服务端测试证明首次身份登录立即可见、绑定后同一行更新且列表/详情不返回完整手机号、OpenID 或 UnionID",
+        "2026-07-20 最终 npm run verify 通过：26 个服务端测试文件 147 项、10 个小程序测试文件 52 项，以及 lint、typecheck、管理后台/小程序/API 生产构建和格式检查全部通过",
+        "2026-07-20 0.1.2 正式体验版真机闭环通过：首页显示“手机号已绑定”，新建收货地址自动预填本人联系手机号；生产后台 /users 同一居民即时可见，绑定状态、小区和账号状态正确，手机号仅显示脱敏结果"
+      ],
+      "notes": "自动化、构建和正式体验版真机功能闭环均已通过；微信平台禁止静默获取手机号，必须由用户点击授权。正式审核前仍需同步微信隐私保护指引；该全局发布门禁未完成时发布结论仍为 NO-GO"
+    },
+    {
+      "id": "resident-profile-display",
+      "phase": 7,
+      "priority": 22,
+      "area": "identity",
+      "title": "居民昵称头像完善与登录后展示",
+      "userVisibleBehavior": "登录居民可主动选择微信头像并填写昵称，保存后在小程序首页和后台居民页展示；跳过资料完善不影响使用。",
+      "status": "passing",
+      "sourcePages": [3, 22, 39, 40, 47, 50, 51],
+      "verification": [
+        "服务端昵称与受控头像保存、格式/大小校验和本人资料恢复测试",
+        "小程序主动选择头像、填写昵称、跳过及重新登录展示验证",
+        "后台居民列表/详情头像昵称展示与隐私字段验证",
+        "微信用户信息隐私声明与 downloadFile 合法域名真机验证"
+      ],
+      "evidence": [
+        "2026-07-21 新增居民资料保存切片：昵称与头像只由居民主动提交，未完善时保持微信用户回退名且不影响现有流程",
+        "2026-07-21 服务端 26 个文件 149 项、小程序 10 个文件 53 项自动化测试及三端生产构建通过；覆盖昵称头像保存与恢复、图片格式和 512 KiB 限制、公开头像读取、后台脱敏展示及小程序状态同步",
+        "2026-07-21 公众平台隐私保护指引已声明用户信息与手机号并进入审核，downloadFile 合法域名已配置；0.1.4 源码与小程序生产候选通过路径、秘密文件、正式 AppID、生产 API 和版本号审计"
+      ],
+      "notes": "自动化和构建已通过；不得静默获取微信昵称或头像，头像只接受 PNG、JPEG、WebP 且不超过 512 KiB，后台只读展示。公众平台隐私声明已提交审核且 downloadFile 合法域名已配置；仍待审核通过、0.1.4 生产迁移/部署和体验版真机验证，完成前发布结论保持 NO-GO。"
     }
   ]
 }

@@ -10,9 +10,17 @@ export const logger = pino({
   redact: {
     paths: [
       'req.headers.authorization',
+      '*.authorization',
+      '*.accessToken',
+      '*.sessionKey',
+      '*.openId',
+      '*.unionId',
       'token',
+      '*.token',
       'password',
+      '*.password',
       'phone',
+      '*.phone',
       'wechatAppSecret',
       'paymentKey',
     ],

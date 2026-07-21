@@ -11,6 +11,7 @@ const ranks = new Map([
   ['enums', 0],
   ['config', 1],
   ['repositories', 2],
+  ['providers', 2],
   ['services', 3],
   ['controllers', 4],
   ['middlewares', 4],

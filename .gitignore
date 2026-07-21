@@ -7,14 +7,22 @@ coverage/
 .env
 .env.*
 !.env.example
+deploy/*.env
+!deploy/*.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cer
 
 work/
 outputs/
 
 server/generated/
+server/src/generated/
 server/uploads/*
 !server/uploads/.gitkeep
 
 miniapp/unpackage/
 miniapp/src/wxcomponents/vant/
-

@@ -6,7 +6,8 @@ import type { AppState } from '../types/api.js';
 
 export const requestLoggerMiddleware: Middleware<AppState> = async (ctx, next) => {
   const startedAt = performance.now();
-  const requestId = ctx.get('x-request-id') || randomUUID();
+  const requestedId = ctx.get('x-request-id');
+  const requestId = /^[A-Za-z0-9._:-]{1,128}$/.test(requestedId) ? requestedId : randomUUID();
   ctx.state.requestId = requestId;
   ctx.set('x-request-id', requestId);
 

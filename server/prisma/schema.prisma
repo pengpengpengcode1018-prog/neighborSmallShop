@@ -1,8 +1,8 @@
 generator client {
   provider            = "prisma-client"
-  output              = "../generated/prisma"
+  output              = "../src/generated/prisma"
   moduleFormat        = "esm"
-  importFileExtension = "ts"
+  importFileExtension = "js"
 }
 
 datasource db {
@@ -18,6 +18,17 @@ enum AdminLoginResult {
   SUCCESS @map("success")
   FAILED  @map("failed")
   LOCKED  @map("locked")
+}
+
+enum UserStatus {
+  ACTIVE   @map("active")
+  DISABLED @map("disabled")
+}
+
+enum UserLoginResult {
+  SUCCESS  @map("success")
+  FAILED   @map("failed")
+  DISABLED @map("disabled")
 }
 
 enum EnableStatus {
@@ -42,6 +53,115 @@ enum ProductStatus {
   OFF_SHELF @map("off_shelf")
 }
 
+enum AddressLabel {
+  HOME    @map("home")
+  COMPANY @map("company")
+  SCHOOL  @map("school")
+  OTHER   @map("other")
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT  @map("pending_payment")
+  PAID             @map("paid")
+  ACCEPTED         @map("accepted")
+  PREPARING        @map("preparing")
+  WAITING_DELIVERY @map("waiting_delivery")
+  DELIVERING       @map("delivering")
+  COMPLETED        @map("completed")
+  CANCELLED        @map("cancelled")
+  REFUND_PENDING   @map("refund_pending")
+  REFUNDED         @map("refunded")
+}
+
+enum DeliveryType {
+  ASAP      @map("asap")
+  SCHEDULED @map("scheduled")
+}
+
+enum OrderOperatorType {
+  USER   @map("user")
+  ADMIN  @map("admin")
+  SYSTEM @map("system")
+  WECHAT @map("wechat")
+}
+
+enum PaymentStatus {
+  CREATING @map("creating")
+  PENDING  @map("pending")
+  CLOSING  @map("closing")
+  SUCCESS  @map("success")
+  FAILED   @map("failed")
+  CLOSED   @map("closed")
+}
+
+enum PaymentNotificationSource {
+  NOTIFY @map("notify")
+  QUERY  @map("query")
+}
+
+enum PaymentNotificationOutcome {
+  PROCESSED         @map("processed")
+  ALREADY_PROCESSED @map("already_processed")
+}
+
+enum RefundStatus {
+  PENDING_REVIEW @map("pending_review")
+  APPROVED       @map("approved")
+  REJECTED       @map("rejected")
+  PROCESSING     @map("processing")
+  SUCCESS        @map("success")
+  FAILED         @map("failed")
+}
+
+enum RefundNotificationOutcome {
+  PROCESSED         @map("processed")
+  ALREADY_PROCESSED @map("already_processed")
+}
+
+enum SubscriptionDecision {
+  ACCEPT @map("accept")
+  REJECT @map("reject")
+  BAN    @map("ban")
+  FILTER @map("filter")
+}
+
+enum NotificationScene {
+  ORDER_PAID       @map("order_paid")
+  ORDER_ACCEPTED   @map("order_accepted")
+  ORDER_DELIVERING @map("order_delivering")
+  ORDER_COMPLETED  @map("order_completed")
+  ORDER_CANCELLED  @map("order_cancelled")
+  REFUND_SUCCESS   @map("refund_success")
+}
+
+enum UserNotificationStatus {
+  PENDING @map("pending")
+  SENDING @map("sending")
+  SENT    @map("sent")
+  SKIPPED @map("skipped")
+  FAILED  @map("failed")
+  UNKNOWN @map("unknown")
+}
+
+enum AdminAlertType {
+  NEW_PAID_ORDER   @map("new_paid_order")
+  UNACCEPTED_ORDER @map("unaccepted_order")
+  REFUND_REQUEST   @map("refund_request")
+  LOW_STOCK        @map("low_stock")
+}
+
+enum AdminAlertSeverity {
+  INFO    @map("info")
+  WARNING @map("warning")
+  URGENT  @map("urgent")
+}
+
+enum AdminAlertStatus {
+  UNREAD   @map("unread")
+  READ     @map("read")
+  RESOLVED @map("resolved")
+}
+
 model Admin {
   id                  String          @id @default(cuid()) @db.VarChar(30)
   username            String          @unique(map: "uk_admins_username") @db.VarChar(64)
@@ -56,6 +176,8 @@ model Admin {
   updatedAt           DateTime        @updatedAt @map("updated_at") @db.DateTime(3)
   loginLogs           AdminLoginLog[]
   operationLogs       OperationLog[]
+  reviewedRefunds     Refund[]        @relation("RefundReviewer")
+  readAlerts          AdminAlert[]    @relation("AdminAlertReader")
 
   @@index([status], map: "idx_admins_status")
   @@map("admins")
@@ -78,6 +200,50 @@ model AdminLoginLog {
   @@map("admin_login_logs")
 }
 
+model User {
+  id                          String                       @id @default(cuid()) @db.VarChar(30)
+  wechatOpenId                String                       @unique(map: "uk_users_wechat_open_id") @map("wechat_open_id") @db.VarChar(128)
+  wechatUnionId               String?                      @unique(map: "uk_users_wechat_union_id") @map("wechat_union_id") @db.VarChar(128)
+  nickname                    String?                      @db.VarChar(64)
+  avatarUrl                   String?                      @map("avatar_url") @db.VarChar(1024)
+  avatarMimeType              String?                      @map("avatar_mime_type") @db.VarChar(32)
+  avatarData                  Bytes?                       @map("avatar_data") @db.MediumBlob
+  phone                       String?                      @unique(map: "uk_users_phone") @db.VarChar(32)
+  currentCommunityId          String?                      @map("current_community_id") @db.VarChar(30)
+  status                      UserStatus                   @default(ACTIVE)
+  lastLoginAt                 DateTime?                    @map("last_login_at") @db.DateTime(3)
+  createdAt                   DateTime                     @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt                   DateTime                     @updatedAt @map("updated_at") @db.DateTime(3)
+  loginLogs                   UserLoginLog[]
+  currentCommunity            Community?                   @relation(fields: [currentCommunityId], references: [id], onDelete: SetNull)
+  cart                        Cart?
+  addresses                   Address[]
+  orders                      Order[]
+  refunds                     Refund[]
+  subscriptionConsents        SubscriptionConsent[]
+  subscriptionConsentReceipts SubscriptionConsentReceipt[]
+  notifications               UserNotification[]
+
+  @@index([currentCommunityId], map: "idx_users_current_community")
+  @@index([status, createdAt], map: "idx_users_status_created_at")
+  @@map("users")
+}
+
+model UserLoginLog {
+  id            String          @id @default(cuid()) @db.VarChar(30)
+  userId        String?         @map("user_id") @db.VarChar(30)
+  result        UserLoginResult
+  failureReason String?         @map("failure_reason") @db.VarChar(64)
+  ipAddress     String?         @map("ip_address") @db.VarChar(45)
+  userAgent     String?         @map("user_agent") @db.VarChar(500)
+  createdAt     DateTime        @default(now()) @map("created_at") @db.DateTime(3)
+  user          User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt], map: "idx_user_login_logs_user_time")
+  @@index([result, createdAt], map: "idx_user_login_logs_result_time")
+  @@map("user_login_logs")
+}
+
 model OperationLog {
   id             String   @id @default(cuid()) @db.VarChar(30)
   adminId        String?  @map("admin_id") @db.VarChar(30)
@@ -90,11 +256,13 @@ model OperationLog {
   afterData      Json?    @map("after_data")
   requestIp      String?  @map("request_ip") @db.VarChar(45)
   requestPath    String?  @map("request_path") @db.VarChar(255)
+  requestId      String?  @map("request_id") @db.VarChar(64)
   createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
   admin          Admin?   @relation(fields: [adminId], references: [id], onDelete: SetNull)
 
   @@index([adminId, createdAt], map: "idx_operation_logs_admin_time")
   @@index([module, businessDataId, createdAt], map: "idx_operation_logs_target_time")
+  @@index([requestId], map: "idx_operation_logs_request_id")
   @@index([createdAt], map: "idx_operation_logs_created_at")
   @@map("operation_logs")
 }
@@ -111,6 +279,8 @@ model Community {
   updatedAt       DateTime         @updatedAt @map("updated_at") @db.DateTime(3)
   deletedAt       DateTime?        @map("deleted_at") @db.DateTime(3)
   stores          StoreCommunity[]
+  currentUsers    User[]
+  addresses       Address[]
 
   @@unique([city, district, name], map: "uk_communities_location_name")
   @@index([status, deletedAt, sortOrder], map: "idx_communities_list")
@@ -131,6 +301,8 @@ model Store {
   minimumOrderAmount       Decimal           @default(0) @map("minimum_order_amount") @db.Decimal(10, 2)
   defaultDeliveryFee       Decimal           @default(0) @map("default_delivery_fee") @db.Decimal(10, 2)
   estimatedDeliveryMinutes Int               @default(45) @map("estimated_delivery_minutes") @db.UnsignedSmallInt
+  asapDeliveryEnabled      Boolean           @default(true) @map("asap_delivery_enabled")
+  scheduledDeliveryEnabled Boolean           @default(true) @map("scheduled_delivery_enabled")
   status                   StoreStatus       @default(OPEN)
   sortOrder                Int               @default(0) @map("sort_order")
   createdAt                DateTime          @default(now()) @map("created_at") @db.DateTime(3)
@@ -139,6 +311,9 @@ model Store {
   communities              StoreCommunity[]
   categories               ProductCategory[]
   products                 Product[]
+  deliverySlots            DeliverySlot[]
+  carts                    Cart[]
+  orders                   Order[]
 
   @@index([status, deletedAt, sortOrder], map: "idx_stores_list")
   @@index([name], map: "idx_stores_name")
@@ -161,6 +336,24 @@ model StoreCommunity {
   @@index([communityId, status], map: "idx_store_communities_community_status")
   @@index([storeId, status], map: "idx_store_communities_store_status")
   @@map("store_communities")
+}
+
+model DeliverySlot {
+  id           String       @id @default(cuid()) @db.VarChar(30)
+  storeId      String       @map("store_id") @db.VarChar(30)
+  deliveryTime String       @map("delivery_time") @db.Char(5)
+  cutoffTime   String       @map("cutoff_time") @db.Char(5)
+  maxOrders    Int          @map("max_orders") @db.UnsignedSmallInt
+  status       EnableStatus @default(ENABLED)
+  sortOrder    Int          @default(0) @map("sort_order")
+  createdAt    DateTime     @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt    DateTime     @updatedAt @map("updated_at") @db.DateTime(3)
+  store        Store        @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  orders       Order[]
+
+  @@unique([storeId, deliveryTime], map: "uk_delivery_slots_store_time")
+  @@index([storeId, status, sortOrder], map: "idx_delivery_slots_store_list")
+  @@map("delivery_slots")
 }
 
 model ProductCategory {
@@ -205,9 +398,343 @@ model Product {
   deletedAt             DateTime?       @map("deleted_at") @db.DateTime(3)
   store                 Store           @relation(fields: [storeId], references: [id], onDelete: Restrict)
   category              ProductCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  cartItems             CartItem[]
+  orderItems            OrderItem[]
 
   @@index([storeId, categoryId, status, deletedAt, sortOrder], map: "idx_products_store_category_list")
   @@index([storeId, status, deletedAt, sortOrder], map: "idx_products_store_list")
   @@index([storeId, name], map: "idx_products_store_name")
   @@map("products")
+}
+
+model Cart {
+  id        String     @id @default(cuid()) @db.VarChar(30)
+  userId    String     @unique(map: "uk_carts_user") @map("user_id") @db.VarChar(30)
+  storeId   String     @map("store_id") @db.VarChar(30)
+  createdAt DateTime   @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt DateTime   @updatedAt @map("updated_at") @db.DateTime(3)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store     Store      @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  items     CartItem[]
+
+  @@index([storeId], map: "idx_carts_store")
+  @@map("carts")
+}
+
+model CartItem {
+  id        String   @id @default(cuid()) @db.VarChar(30)
+  cartId    String   @map("cart_id") @db.VarChar(30)
+  productId String   @map("product_id") @db.VarChar(30)
+  quantity  Int      @db.UnsignedInt
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([cartId, productId], map: "uk_cart_items_cart_product")
+  @@index([productId], map: "idx_cart_items_product")
+  @@map("cart_items")
+}
+
+model Address {
+  id            String       @id @default(cuid()) @db.VarChar(30)
+  userId        String       @map("user_id") @db.VarChar(30)
+  communityId   String       @map("community_id") @db.VarChar(30)
+  recipientName String       @map("recipient_name") @db.VarChar(64)
+  phone         String       @db.VarChar(32)
+  building      String       @db.VarChar(80)
+  unit          String?      @db.VarChar(80)
+  room          String       @db.VarChar(80)
+  detail        String?      @db.VarChar(255)
+  label         AddressLabel @default(HOME)
+  isDefault     Boolean      @default(false) @map("is_default")
+  defaultKey    String?      @unique(map: "uk_addresses_default_key") @map("default_key") @db.VarChar(30)
+  lastUsedAt    DateTime?    @map("last_used_at") @db.DateTime(3)
+  createdAt     DateTime     @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt     DateTime     @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt     DateTime?    @map("deleted_at") @db.DateTime(3)
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  community     Community    @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  orders        Order[]
+
+  @@index([userId, deletedAt, isDefault, updatedAt], map: "idx_addresses_user_list")
+  @@index([communityId, deletedAt], map: "idx_addresses_community")
+  @@map("addresses")
+}
+
+model Order {
+  id                   String             @id @default(cuid()) @db.VarChar(30)
+  orderNo              String             @unique(map: "uk_orders_order_no") @map("order_no") @db.VarChar(32)
+  userId               String             @map("user_id") @db.VarChar(30)
+  storeId              String             @map("store_id") @db.VarChar(30)
+  addressId            String             @map("address_id") @db.VarChar(30)
+  deliverySlotId       String?            @map("delivery_slot_id") @db.VarChar(30)
+  requestId            String             @map("request_id") @db.VarChar(64)
+  requestFingerprint   String             @map("request_fingerprint") @db.Char(64)
+  previewVersion       String             @map("preview_version") @db.Char(64)
+  status               OrderStatus        @default(PENDING_PAYMENT)
+  deliveryType         DeliveryType       @map("delivery_type")
+  deliveryDate         DateTime?          @map("delivery_date") @db.Date
+  deliveryTime         String?            @map("delivery_time") @db.Char(5)
+  remark               String?            @db.VarChar(200)
+  storeName            String             @map("store_name") @db.VarChar(120)
+  merchandiseTotal     Decimal            @map("merchandise_total") @db.Decimal(10, 2)
+  deliveryFee          Decimal            @map("delivery_fee") @db.Decimal(10, 2)
+  payableTotal         Decimal            @map("payable_total") @db.Decimal(10, 2)
+  addressRecipientName String             @map("address_recipient_name") @db.VarChar(64)
+  addressPhone         String             @map("address_phone") @db.VarChar(32)
+  addressCommunityName String             @map("address_community_name") @db.VarChar(120)
+  addressBuilding      String             @map("address_building") @db.VarChar(80)
+  addressUnit          String?            @map("address_unit") @db.VarChar(80)
+  addressRoom          String             @map("address_room") @db.VarChar(80)
+  addressDetail        String?            @map("address_detail") @db.VarChar(255)
+  storeLogoUrl         String?            @map("store_logo_url") @db.VarChar(1024)
+  storePhone           String?            @map("store_phone") @db.VarChar(32)
+  adminRemark          String?            @map("admin_remark") @db.VarChar(500)
+  stockReleased        Boolean            @default(false) @map("stock_released")
+  expiresAt            DateTime           @map("expires_at") @db.DateTime(3)
+  paidAt               DateTime?          @map("paid_at") @db.DateTime(3)
+  acceptedAt           DateTime?          @map("accepted_at") @db.DateTime(3)
+  preparingAt          DateTime?          @map("preparing_at") @db.DateTime(3)
+  waitingDeliveryAt    DateTime?          @map("waiting_delivery_at") @db.DateTime(3)
+  deliveringAt         DateTime?          @map("delivering_at") @db.DateTime(3)
+  completedAt          DateTime?          @map("completed_at") @db.DateTime(3)
+  cancelledAt          DateTime?          @map("cancelled_at") @db.DateTime(3)
+  refundedAt           DateTime?          @map("refunded_at") @db.DateTime(3)
+  cancellationReason   String?            @map("cancellation_reason") @db.VarChar(255)
+  createdAt            DateTime           @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt            DateTime           @updatedAt @map("updated_at") @db.DateTime(3)
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  store                Store              @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  address              Address            @relation(fields: [addressId], references: [id], onDelete: Restrict)
+  deliverySlot         DeliverySlot?      @relation(fields: [deliverySlotId], references: [id], onDelete: Restrict)
+  items                OrderItem[]
+  statusLogs           OrderStatusLog[]
+  payment              Payment?
+  refund               Refund?
+  notifications        UserNotification[]
+
+  @@unique([userId, requestId], map: "uk_orders_user_request")
+  @@index([userId, status, createdAt], map: "idx_orders_user_status_time")
+  @@index([storeId, status, createdAt], map: "idx_orders_store_status_time")
+  @@index([deliverySlotId, deliveryDate, status], map: "idx_orders_delivery_capacity")
+  @@index([expiresAt, status], map: "idx_orders_expiry")
+  @@map("orders")
+}
+
+model OrderItem {
+  id              String   @id @default(cuid()) @db.VarChar(30)
+  orderId         String   @map("order_id") @db.VarChar(30)
+  productId       String   @map("product_id") @db.VarChar(30)
+  productName     String   @map("product_name") @db.VarChar(120)
+  productImageUrl String?  @map("product_image_url") @db.VarChar(1024)
+  unitPrice       Decimal  @map("unit_price") @db.Decimal(10, 2)
+  quantity        Int      @db.UnsignedInt
+  lineTotal       Decimal  @map("line_total") @db.Decimal(10, 2)
+  createdAt       DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([orderId, productId], map: "uk_order_items_order_product")
+  @@index([productId], map: "idx_order_items_product")
+  @@map("order_items")
+}
+
+model OrderStatusLog {
+  id           String            @id @default(cuid()) @db.VarChar(30)
+  orderId      String            @map("order_id") @db.VarChar(30)
+  fromStatus   OrderStatus?      @map("from_status")
+  toStatus     OrderStatus       @map("to_status")
+  operatorType OrderOperatorType @map("operator_type")
+  operatorId   String?           @map("operator_id") @db.VarChar(30)
+  operatorName String?           @map("operator_name") @db.VarChar(64)
+  description  String            @db.VarChar(255)
+  createdAt    DateTime          @default(now()) @map("created_at") @db.DateTime(3)
+  order        Order             @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  notification UserNotification?
+
+  @@index([orderId, createdAt], map: "idx_order_status_logs_order_time")
+  @@map("order_status_logs")
+}
+
+model Payment {
+  id                 String                @id @default(cuid()) @db.VarChar(30)
+  orderId            String                @unique(map: "uk_payments_order") @map("order_id") @db.VarChar(30)
+  outTradeNo         String                @unique(map: "uk_payments_out_trade_no") @map("out_trade_no") @db.VarChar(32)
+  provider           String                @default("WECHAT") @db.VarChar(16)
+  status             PaymentStatus         @default(CREATING)
+  amount             Decimal               @db.Decimal(10, 2)
+  currency           String                @default("CNY") @db.Char(3)
+  prepayId           String?               @map("prepay_id") @db.VarChar(64)
+  transactionId      String?               @unique(map: "uk_payments_transaction_id") @map("transaction_id") @db.VarChar(32)
+  tradeState         String?               @map("trade_state") @db.VarChar(32)
+  failureReason      String?               @map("failure_reason") @db.VarChar(64)
+  prepayExpiresAt    DateTime?             @map("prepay_expires_at") @db.DateTime(3)
+  succeededAt        DateTime?             @map("succeeded_at") @db.DateTime(3)
+  lastQueriedAt      DateTime?             @map("last_queried_at") @db.DateTime(3)
+  closeReason        String?               @map("close_reason") @db.VarChar(255)
+  closeOperatorType  OrderOperatorType?    @map("close_operator_type")
+  closeOperatorId    String?               @map("close_operator_id") @db.VarChar(30)
+  closeOperatorName  String?               @map("close_operator_name") @db.VarChar(64)
+  closeRequestedAt   DateTime?             @map("close_requested_at") @db.DateTime(3)
+  lastCloseAttemptAt DateTime?             @map("last_close_attempt_at") @db.DateTime(3)
+  closeAttemptCount  Int                   @default(0) @map("close_attempt_count") @db.UnsignedSmallInt
+  closedAt           DateTime?             @map("closed_at") @db.DateTime(3)
+  createdAt          DateTime              @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt          DateTime              @updatedAt @map("updated_at") @db.DateTime(3)
+  order              Order                 @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  notifications      PaymentNotification[]
+  refund             Refund?
+
+  @@index([status, updatedAt], map: "idx_payments_status_time")
+  @@index([status, succeededAt], map: "idx_payments_status_succeeded_at")
+  @@map("payments")
+}
+
+model PaymentNotification {
+  id             String                     @id @default(cuid()) @db.VarChar(30)
+  paymentId      String                     @map("payment_id") @db.VarChar(30)
+  notificationId String                     @unique(map: "uk_payment_notifications_external") @map("notification_id") @db.VarChar(64)
+  source         PaymentNotificationSource
+  eventType      String                     @map("event_type") @db.VarChar(64)
+  payloadDigest  String                     @map("payload_digest") @db.Char(64)
+  transactionId  String                     @map("transaction_id") @db.VarChar(32)
+  outcome        PaymentNotificationOutcome
+  createdAt      DateTime                   @default(now()) @map("created_at") @db.DateTime(3)
+  payment        Payment                    @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@index([paymentId, createdAt], map: "idx_payment_notifications_payment_time")
+  @@map("payment_notifications")
+}
+
+model Refund {
+  id                 String               @id @default(cuid()) @db.VarChar(30)
+  refundNo           String               @unique(map: "uk_refunds_refund_no") @map("refund_no") @db.VarChar(64)
+  orderId            String               @unique(map: "uk_refunds_order") @map("order_id") @db.VarChar(30)
+  paymentId          String               @unique(map: "uk_refunds_payment") @map("payment_id") @db.VarChar(30)
+  userId             String               @map("user_id") @db.VarChar(30)
+  requestId          String               @map("request_id") @db.VarChar(64)
+  requestFingerprint String               @map("request_fingerprint") @db.Char(64)
+  status             RefundStatus         @default(PENDING_REVIEW)
+  amount             Decimal              @db.Decimal(10, 2)
+  currency           String               @default("CNY") @db.Char(3)
+  reason             String               @db.VarChar(32)
+  userNote           String?              @map("user_note") @db.VarChar(200)
+  reviewNote         String?              @map("review_note") @db.VarChar(255)
+  reviewedByAdminId  String?              @map("reviewed_by_admin_id") @db.VarChar(30)
+  reviewedAt         DateTime?            @map("reviewed_at") @db.DateTime(3)
+  providerRefundId   String?              @unique(map: "uk_refunds_provider_refund_id") @map("provider_refund_id") @db.VarChar(32)
+  providerStatus     String?              @map("provider_status") @db.VarChar(32)
+  failureReason      String?              @map("failure_reason") @db.VarChar(64)
+  applyAttemptCount  Int                  @default(0) @map("apply_attempt_count") @db.UnsignedSmallInt
+  lastApplyAttemptAt DateTime?            @map("last_apply_attempt_at") @db.DateTime(3)
+  lastQueriedAt      DateTime?            @map("last_queried_at") @db.DateTime(3)
+  providerAcceptedAt DateTime?            @map("provider_accepted_at") @db.DateTime(3)
+  completedAt        DateTime?            @map("completed_at") @db.DateTime(3)
+  createdAt          DateTime             @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt          DateTime             @updatedAt @map("updated_at") @db.DateTime(3)
+  order              Order                @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  payment            Payment              @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Restrict)
+  reviewedByAdmin    Admin?               @relation("RefundReviewer", fields: [reviewedByAdminId], references: [id], onDelete: SetNull)
+  notifications      RefundNotification[]
+
+  @@unique([userId, requestId], map: "uk_refunds_user_request")
+  @@index([status, createdAt], map: "idx_refunds_status_time")
+  @@index([status, completedAt], map: "idx_refunds_status_completed_at")
+  @@index([orderId, status], map: "idx_refunds_order_status")
+  @@map("refunds")
+}
+
+model RefundNotification {
+  id             String                    @id @default(cuid()) @db.VarChar(30)
+  refundId       String                    @map("refund_id") @db.VarChar(30)
+  notificationId String                    @unique(map: "uk_refund_notifications_external") @map("notification_id") @db.VarChar(64)
+  eventType      String                    @map("event_type") @db.VarChar(64)
+  payloadDigest  String                    @map("payload_digest") @db.Char(64)
+  providerStatus String                    @map("provider_status") @db.VarChar(32)
+  outcome        RefundNotificationOutcome
+  createdAt      DateTime                  @default(now()) @map("created_at") @db.DateTime(3)
+  refund         Refund                    @relation(fields: [refundId], references: [id], onDelete: Restrict)
+
+  @@index([refundId, createdAt], map: "idx_refund_notifications_refund_time")
+  @@map("refund_notifications")
+}
+
+model SubscriptionConsent {
+  id             String               @id @default(cuid()) @db.VarChar(30)
+  userId         String               @map("user_id") @db.VarChar(30)
+  templateId     String               @map("template_id") @db.VarChar(128)
+  decision       SubscriptionDecision
+  availableCount Int                  @default(0) @map("available_count") @db.UnsignedSmallInt
+  lastReportedAt DateTime             @map("last_reported_at") @db.DateTime(3)
+  createdAt      DateTime             @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt      DateTime             @updatedAt @map("updated_at") @db.DateTime(3)
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, templateId], map: "uk_subscription_consents_user_template")
+  @@index([userId, decision, updatedAt], map: "idx_subscription_consents_user_status")
+  @@map("subscription_consents")
+}
+
+model SubscriptionConsentReceipt {
+  id                 String   @id @default(cuid()) @db.VarChar(30)
+  userId             String   @map("user_id") @db.VarChar(30)
+  requestId          String   @map("request_id") @db.VarChar(64)
+  requestFingerprint String   @map("request_fingerprint") @db.Char(64)
+  createdAt          DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, requestId], map: "uk_subscription_receipts_user_request")
+  @@index([createdAt], map: "idx_subscription_receipts_created_at")
+  @@map("subscription_consent_receipts")
+}
+
+model UserNotification {
+  id                String                 @id @default(cuid()) @db.VarChar(30)
+  userId            String                 @map("user_id") @db.VarChar(30)
+  orderId           String                 @map("order_id") @db.VarChar(30)
+  sourceStatusLogId String                 @unique(map: "uk_user_notifications_source_log") @map("source_status_log_id") @db.VarChar(30)
+  scene             NotificationScene
+  templateId        String?                @map("template_id") @db.VarChar(128)
+  status            UserNotificationStatus @default(PENDING)
+  attemptCount      Int                    @default(0) @map("attempt_count") @db.UnsignedSmallInt
+  sendStartedAt     DateTime?              @map("send_started_at") @db.DateTime(3)
+  nextAttemptAt     DateTime?              @map("next_attempt_at") @db.DateTime(3)
+  lastErrorCode     String?                @map("last_error_code") @db.VarChar(64)
+  sentAt            DateTime?              @map("sent_at") @db.DateTime(3)
+  createdAt         DateTime               @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt         DateTime               @updatedAt @map("updated_at") @db.DateTime(3)
+  user              User                   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  order             Order                  @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  sourceStatusLog   OrderStatusLog         @relation(fields: [sourceStatusLogId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt, createdAt], map: "idx_user_notifications_delivery")
+  @@index([userId, createdAt], map: "idx_user_notifications_user_time")
+  @@index([orderId, scene], map: "idx_user_notifications_order_scene")
+  @@map("user_notifications")
+}
+
+model AdminAlert {
+  id            String             @id @default(cuid()) @db.VarChar(30)
+  type          AdminAlertType
+  resourceType  String             @map("resource_type") @db.VarChar(32)
+  resourceId    String             @map("resource_id") @db.VarChar(30)
+  dedupeKey     String             @unique(map: "uk_admin_alerts_dedupe_key") @map("dedupe_key") @db.VarChar(96)
+  title         String             @db.VarChar(120)
+  message       String             @db.VarChar(255)
+  severity      AdminAlertSeverity
+  status        AdminAlertStatus   @default(UNREAD)
+  occurredAt    DateTime           @map("occurred_at") @db.DateTime(3)
+  readAt        DateTime?          @map("read_at") @db.DateTime(3)
+  readByAdminId String?            @map("read_by_admin_id") @db.VarChar(30)
+  resolvedAt    DateTime?          @map("resolved_at") @db.DateTime(3)
+  createdAt     DateTime           @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt     DateTime           @updatedAt @map("updated_at") @db.DateTime(3)
+  readByAdmin   Admin?             @relation("AdminAlertReader", fields: [readByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([status, type, occurredAt], map: "idx_admin_alerts_status_type_time")
+  @@index([resourceType, resourceId], map: "idx_admin_alerts_resource")
+  @@index([readByAdminId], map: "idx_admin_alerts_read_by_admin_id")
+  @@map("admin_alerts")
 }
