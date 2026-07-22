@@ -7,7 +7,7 @@ import CartBar from '../../components/CartBar.vue';
 import { useCartStore } from '../../stores/cart';
 import { useProductStore } from '../../stores/product';
 import { useUserStore } from '../../stores/user';
-import { ApiRequestError } from '../../utils/request';
+import { ApiRequestError, resolveApiAssetUrl } from '../../utils/request';
 
 const productStore = useProductStore();
 const { detail, isDetailLoading, detailError } = storeToRefs(productStore);
@@ -19,8 +19,10 @@ const userStore = useUserStore();
 const { accessToken, profile } = storeToRefs(userStore);
 const images = computed(() => {
   if (!detail.value) return [];
-  if (detail.value.galleryImageUrls.length > 0) return detail.value.galleryImageUrls;
-  return detail.value.mainImageUrl ? [detail.value.mainImageUrl] : [];
+  if (detail.value.galleryImageUrls.length > 0) {
+    return detail.value.galleryImageUrls.map((imageUrl) => resolveApiAssetUrl(imageUrl));
+  }
+  return detail.value.mainImageUrl ? [resolveApiAssetUrl(detail.value.mainImageUrl)] : [];
 });
 
 watch(

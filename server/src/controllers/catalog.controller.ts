@@ -19,6 +19,12 @@ const productWrite = z.object({
   storeId: z.string().min(1),
   categoryId: z.string().min(1),
   name: z.string().trim().min(1).max(120),
+  mainImageUrl: z.string().trim().min(1).max(1024).nullable().optional(),
+  galleryImageUrls: z
+    .array(z.string().trim().min(1).max(1024))
+    .max(6)
+    .refine((urls) => new Set(urls).size === urls.length)
+    .optional(),
   description: z.string().trim().max(500).optional(),
   detail: z.string().max(50_000).optional(),
   price: money,

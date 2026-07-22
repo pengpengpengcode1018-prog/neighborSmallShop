@@ -2,8 +2,8 @@
   "name": "近邻小铺子",
   "appid": "wxc44c68a305d7fd91",
   "description": "固定社区本地购物与配送平台",
-  "versionName": "0.1.4",
-  "versionCode": "104",
+  "versionName": "0.1.5",
+  "versionCode": "105",
   "transformPx": false,
   "mp-weixin": {
     "appid": "wxc44c68a305d7fd91",

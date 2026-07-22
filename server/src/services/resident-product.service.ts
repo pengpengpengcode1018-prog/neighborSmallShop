@@ -40,7 +40,7 @@ function serializeSummary(product: ResidentProductRecord, storeCanOrder: boolean
 
 function galleryImages(value: ResidentProductRecord['galleryImageUrls']): string[] {
   if (!Array.isArray(value)) return [];
-  return value.filter((item): item is string => typeof item === 'string');
+  return [...new Set(value.filter((item): item is string => typeof item === 'string'))];
 }
 
 export const residentProductService = {

@@ -24,6 +24,8 @@ export interface Product {
   storeId: string;
   categoryId: string;
   name: string;
+  mainImageUrl: string | null;
+  galleryImageUrls: string[];
   description: string | null;
   detail: string | null;
   price: string;
@@ -41,6 +43,8 @@ export interface ProductInput {
   storeId: string;
   categoryId: string;
   name: string;
+  mainImageUrl: string | null;
+  galleryImageUrls: string[];
   description?: string | undefined;
   detail?: string | undefined;
   price: string;

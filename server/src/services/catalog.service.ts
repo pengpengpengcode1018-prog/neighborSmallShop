@@ -10,6 +10,7 @@ import {
   type ProductWriteInput,
 } from '../repositories/catalog.repository.js';
 import type { AuditActor } from '../repositories/audit.repository.js';
+import { mediaService } from './media.service.js';
 
 function translate(error: unknown): never {
   if (error instanceof InvalidCatalogReferenceError) {
@@ -36,10 +37,21 @@ async function safe<T>(operation: () => Promise<T>): Promise<T> {
 }
 
 function serializeProduct<
-  T extends { price: Prisma.Decimal; originalPrice: Prisma.Decimal | null },
+  T extends {
+    price: Prisma.Decimal;
+    originalPrice: Prisma.Decimal | null;
+    galleryImageUrls: Prisma.JsonValue | null;
+  },
 >(item: T) {
   return {
     ...item,
+    galleryImageUrls: Array.isArray(item.galleryImageUrls)
+      ? [
+          ...new Set(
+            item.galleryImageUrls.filter((value): value is string => typeof value === 'string'),
+          ),
+        ]
+      : [],
     price: item.price.toFixed(2),
     originalPrice: item.originalPrice?.toFixed(2) ?? null,
   };
@@ -88,6 +100,7 @@ export const catalogService = {
     };
   },
   async createProduct(input: ProductWriteInput, actor: AuditActor) {
+    await mediaService.assertManagedUrls([input.mainImageUrl, ...(input.galleryImageUrls ?? [])]);
     return serializeProduct(await safe(() => catalogRepository.createProduct(input, actor)));
   },
   async updateProduct(id: string, input: ProductWriteInput, actor: AuditActor) {
@@ -96,6 +109,7 @@ export const catalogService = {
     if (existing.storeId !== input.storeId) {
       throw new HttpError(400, ERROR_CODES.VALIDATION_ERROR, '不能跨店铺移动商品');
     }
+    await mediaService.assertManagedUrls([input.mainImageUrl, ...(input.galleryImageUrls ?? [])]);
     return serializeProduct(await safe(() => catalogRepository.updateProduct(id, input, actor)));
   },
   async removeProduct(id: string, actor: AuditActor) {

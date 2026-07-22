@@ -9,6 +9,7 @@ import { useOrderStore } from '../../stores/order';
 import { useStoreStore } from '../../stores/store';
 import { useUserStore } from '../../stores/user';
 import type { DeliveryType, OrderSelection } from '../../types/domain';
+import { resolveApiAssetUrl } from '../../utils/request';
 
 const addressStore = useAddressStore();
 const cartStore = useCartStore();
@@ -226,29 +227,43 @@ async function payCreatedOrder(): Promise<void> {
           createdOrder.summary.payableTotal
         }}
       </text>
-      <van-notice-bar
-        left-icon="info-o"
-        text="支付完成后将由服务端回调或主动查询确认，请勿仅以微信客户端提示为准。"
-      />
+      <view class="success-card__notice">
+        <van-notice-bar
+          wrapable
+          left-icon="info-o"
+          text="支付完成后将由服务端回调或主动查询确认，请勿仅以微信客户端提示为准。"
+        />
+      </view>
       <text v-if="paymentError" class="payment-error">{{ paymentError }}</text>
-      <van-button
-        block
-        type="primary"
-        :loading="isPaying"
-        :disabled="isCreatedOrderExpired"
-        loading-text="支付确认中…"
-        @click="payCreatedOrder"
-      >
-        {{
-          isCreatedOrderExpired
-            ? '支付已超时，请查看订单'
-            : `立即支付 ¥${createdOrder.summary.payableTotal}`
-        }}
-      </van-button>
-      <van-button block plain :disabled="isPaying" @click="viewCreatedOrder">
-        查看订单详情
-      </van-button>
-      <van-button block plain :disabled="isPaying" @click="goHome">返回首页</van-button>
+      <view class="success-card__actions">
+        <van-button
+          class="success-card__action"
+          block
+          type="primary"
+          :loading="isPaying"
+          :disabled="isCreatedOrderExpired"
+          loading-text="支付确认中…"
+          @click="payCreatedOrder"
+        >
+          {{
+            isCreatedOrderExpired
+              ? '支付已超时，请查看订单'
+              : `立即支付 ¥${createdOrder.summary.payableTotal}`
+          }}
+        </van-button>
+        <van-button
+          class="success-card__action"
+          block
+          plain
+          :disabled="isPaying"
+          @click="viewCreatedOrder"
+        >
+          查看订单详情
+        </van-button>
+        <van-button class="success-card__action" block plain :disabled="isPaying" @click="goHome">
+          返回首页
+        </van-button>
+      </view>
     </view>
 
     <view v-else-if="isPreviewLoading && !preview" class="order-state">
@@ -330,7 +345,7 @@ async function payCreatedOrder(): Promise<void> {
             v-if="item.imageUrl"
             class="order-item__image"
             mode="aspectFill"
-            :src="item.imageUrl"
+            :src="resolveApiAssetUrl(item.imageUrl)"
           />
           <view v-else class="order-item__image order-item__fallback">{{
             item.name.slice(0, 1)
@@ -397,7 +412,9 @@ async function payCreatedOrder(): Promise<void> {
 <style scoped lang="scss">
 .order-page {
   min-height: 100vh;
-  padding: 28rpx 28rpx 190rpx;
+  box-sizing: border-box;
+  padding: 24rpx 28rpx 210rpx;
+  background: linear-gradient(180deg, #f2f8f5 0, #f8fbfa 42%, #f4f8f6 100%);
 }
 
 .order-state,
@@ -411,9 +428,12 @@ async function payCreatedOrder(): Promise<void> {
 }
 
 .success-card {
-  padding: 42rpx;
+  margin-top: 20rpx;
+  padding: 52rpx 36rpx 40rpx;
   background: #ffffff;
-  border-radius: 28rpx;
+  border: 1rpx solid #e1eee8;
+  border-radius: 32rpx;
+  box-shadow: 0 14rpx 38rpx rgb(31 97 70 / 10%);
   text-align: center;
 }
 
@@ -425,23 +445,51 @@ async function payCreatedOrder(): Promise<void> {
   justify-content: center;
   color: #ffffff;
   font-size: 58rpx;
-  background: #1f8f63;
+  background: linear-gradient(145deg, #2aa974, #14744f);
   border-radius: 50%;
+  box-shadow: 0 12rpx 24rpx rgb(31 143 99 / 24%);
 }
 
 .success-card__title {
   font-size: 40rpx;
   font-weight: 700;
+  letter-spacing: 1rpx;
 }
+
 .success-card__number {
   color: #66756d;
   font-size: 24rpx;
 }
+
 .success-card__status {
   color: #d94f3d;
   font-size: 32rpx;
   font-weight: 700;
 }
+
+.success-card__notice,
+.success-card__actions {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.success-card__notice {
+  overflow: hidden;
+  border-radius: 14rpx;
+}
+
+.success-card__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16rpx;
+}
+
+.success-card__action {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .payment-error {
   color: #c33b31;
   font-size: 23rpx;
@@ -454,6 +502,7 @@ async function payCreatedOrder(): Promise<void> {
   background: #ffffff;
   border: 1rpx solid #e4ece8;
   border-radius: 24rpx;
+  box-shadow: 0 8rpx 24rpx rgb(31 97 70 / 6%);
 }
 
 .section-heading,
@@ -476,56 +525,100 @@ async function payCreatedOrder(): Promise<void> {
 .section-title {
   font-size: 28rpx;
   font-weight: 700;
+  line-height: 1.4;
 }
+
 .section-link {
   color: #1f8f63;
   font-weight: 400;
 }
+
+.address-card {
+  position: relative;
+  overflow: hidden;
+  border-left: 8rpx solid #1f8f63;
+}
+
+.address-card::after {
+  position: absolute;
+  right: 26rpx;
+  bottom: 20rpx;
+  width: 58rpx;
+  height: 58rpx;
+  content: '';
+  background: #eef8f3;
+  border-radius: 50%;
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.address-card .section-heading,
+.address-card__person,
+.address-card__line {
+  position: relative;
+  z-index: 1;
+}
+
 .address-card__person {
   display: block;
   margin-top: 22rpx;
   font-size: 29rpx;
   font-weight: 700;
+  line-height: 1.45;
 }
+
 .address-card__line {
   display: block;
   margin-top: 12rpx;
   color: #627168;
   font-size: 25rpx;
   line-height: 1.6;
+  padding-right: 24rpx;
 }
 
 .delivery-tabs {
   gap: 18rpx;
   margin-top: 22rpx;
 }
+
 .delivery-tab {
   flex: 1;
-  padding: 20rpx;
+  padding: 22rpx 18rpx;
   color: #627168;
   background: #f4f8f6;
-  border: 2rpx solid transparent;
-  border-radius: 16rpx;
+  border: 2rpx solid #edf3ef;
+  border-radius: 18rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  line-height: 1.3;
   text-align: center;
 }
+
 .delivery-tab--active {
   color: #1f8f63;
   background: #e8f6f0;
   border-color: #1f8f63;
+  box-shadow: inset 0 0 0 1rpx rgb(31 143 99 / 12%);
 }
+
 .delivery-hint {
   display: block;
   margin-top: 18rpx;
   color: #74827b;
   font-size: 23rpx;
+  line-height: 1.5;
 }
+
 .picker-list {
   margin-top: 18rpx;
 }
+
 .picker-row {
+  min-height: 48rpx;
   padding: 20rpx 0;
   border-top: 1rpx solid #edf2ef;
   font-size: 25rpx;
+  line-height: 1.4;
 }
 
 .order-item {
@@ -538,12 +631,15 @@ async function payCreatedOrder(): Promise<void> {
 }
 .order-item__image {
   display: flex;
-  width: 96rpx;
-  height: 96rpx;
+  width: 112rpx;
+  height: 112rpx;
+  flex: 0 0 112rpx;
   align-items: center;
   justify-content: center;
-  border-radius: 14rpx;
+  background: #f1f7f4;
+  border-radius: 18rpx;
 }
+
 .order-item__fallback {
   color: #1f8f63;
   background: #e8f6f0;
@@ -562,15 +658,20 @@ async function payCreatedOrder(): Promise<void> {
   overflow: hidden;
   font-size: 27rpx;
   font-weight: 650;
+  line-height: 1.4;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .order-item__meta {
   margin-top: 12rpx;
   color: #74827b;
   font-size: 22rpx;
+  line-height: 1.4;
 }
+
 .order-item__total {
+  flex: 0 0 auto;
   font-size: 26rpx;
   font-weight: 700;
 }
@@ -578,12 +679,16 @@ async function payCreatedOrder(): Promise<void> {
 .remark-input {
   width: 100%;
   height: 150rpx;
+  box-sizing: border-box;
   margin-top: 20rpx;
   padding: 20rpx;
   font-size: 25rpx;
   background: #f4f8f6;
+  border: 1rpx solid transparent;
   border-radius: 16rpx;
+  line-height: 1.5;
 }
+
 .remark-count {
   display: block;
   margin-top: 8rpx;
@@ -591,24 +696,33 @@ async function payCreatedOrder(): Promise<void> {
   font-size: 21rpx;
   text-align: right;
 }
+
 .price-list > view {
-  padding: 10rpx 0;
+  padding: 12rpx 0;
   color: #627168;
   font-size: 25rpx;
+  line-height: 1.4;
 }
+
 .price-list > .price-list__total {
+  margin-top: 12rpx;
+  padding-top: 22rpx;
   color: #21302a;
   font-size: 30rpx;
   font-weight: 700;
+  border-top: 1rpx solid #edf2ef;
 }
+
 .latest-confirm {
   margin: 20rpx 0;
 }
+
 .submit-error {
   display: block;
   margin: 18rpx 0;
   color: #c33b31;
   font-size: 23rpx;
+  line-height: 1.5;
   text-align: center;
 }
 
@@ -619,20 +733,25 @@ async function payCreatedOrder(): Promise<void> {
   bottom: 0;
   left: 0;
   justify-content: space-between;
+  box-sizing: border-box;
   padding: 22rpx 28rpx calc(22rpx + env(safe-area-inset-bottom));
   background: #ffffff;
+  border-top: 1rpx solid #e1eee8;
   box-shadow: 0 -10rpx 30rpx rgb(31 64 50 / 8%);
 }
+
 .submit-bar__label {
   color: #64736b;
   font-size: 23rpx;
 }
+
 .submit-bar__amount {
   margin-left: 10rpx;
   color: #d94f3d;
   font-size: 38rpx;
   font-weight: 750;
 }
+
 .submit-bar__button {
   min-width: 250rpx;
   margin: 0;
@@ -641,14 +760,18 @@ async function payCreatedOrder(): Promise<void> {
   font-size: 28rpx;
   font-weight: 700;
   line-height: 84rpx;
-  background: #1f8f63;
+  background: linear-gradient(135deg, #2aa974, #14744f);
   border: 0;
   border-radius: 44rpx;
+  box-shadow: 0 10rpx 20rpx rgb(31 143 99 / 20%);
 }
+
 .submit-bar__button::after {
   border: 0;
 }
+
 .submit-bar__button[disabled] {
   opacity: 0.5;
+  box-shadow: none;
 }
 </style>

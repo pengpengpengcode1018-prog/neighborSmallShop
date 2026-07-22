@@ -12,6 +12,8 @@ export interface StoreCommunity {
 export interface Store {
   id: string;
   name: string;
+  logoUrl: string | null;
+  coverUrl: string | null;
   phone: string;
   address: string;
   description: string | null;
@@ -28,6 +30,8 @@ export interface Store {
 
 export interface StoreInput {
   name: string;
+  logoUrl?: string | null;
+  coverUrl?: string | null;
   phone: string;
   address: string;
   description?: string;

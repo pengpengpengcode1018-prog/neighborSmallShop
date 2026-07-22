@@ -7,6 +7,7 @@ import {
   storeRepository,
   type StoreWriteInput,
 } from '../repositories/store.repository.js';
+import { mediaService } from './media.service.js';
 
 function notFound() {
   return new HttpError(404, ERROR_CODES.NOT_FOUND, '店铺不存在');
@@ -58,10 +59,12 @@ export const storeService = {
     };
   },
   async create(input: StoreWriteInput, actor: AuditActor) {
+    await mediaService.assertManagedUrls([input.logoUrl, input.coverUrl]);
     return serialize(await translateReferences(() => storeRepository.create(input, actor)));
   },
   async update(id: string, input: StoreWriteInput, actor: AuditActor) {
     if (!(await storeRepository.find(id))) throw notFound();
+    await mediaService.assertManagedUrls([input.logoUrl, input.coverUrl]);
     return serialize(await translateReferences(() => storeRepository.update(id, input, actor)));
   },
   async updateStatus(id: string, status: 'OPEN' | 'PAUSED' | 'DISABLED', actor: AuditActor) {

@@ -3,7 +3,8 @@ import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'elem
 import { onMounted, reactive, ref } from 'vue';
 
 import { listCommunities, type Community } from '../../api/communities';
-import { getApiErrorMessage } from '../../api/http';
+import { getApiErrorMessage, resolveApiAssetUrl } from '../../api/http';
+import { uploadImage } from '../../api/media';
 import {
   createStore,
   deleteStore,
@@ -28,9 +29,12 @@ const dialogVisible = ref(false);
 const saving = ref(false);
 const editingId = ref<string | null>(null);
 const formRef = ref<FormInstance>();
+const imageUploading = ref<'logoUrl' | 'coverUrl' | null>(null);
 
 const emptyForm = (): StoreInput => ({
   name: '',
+  logoUrl: null,
+  coverUrl: null,
   phone: '',
   address: '',
   description: '',
@@ -100,6 +104,8 @@ async function openEdit(row: Store): Promise<void> {
     await loadCommunities();
     Object.assign(form, {
       name: row.name,
+      logoUrl: row.logoUrl,
+      coverUrl: row.coverUrl,
       phone: row.phone,
       address: row.address,
       description: row.description ?? '',
@@ -117,6 +123,31 @@ async function openEdit(row: Store): Promise<void> {
   } catch (error) {
     ElMessage.error(getApiErrorMessage(error));
   }
+}
+
+async function uploadStoreImage(field: 'logoUrl' | 'coverUrl', event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file) return;
+  imageUploading.value = field;
+  try {
+    const uploaded = await uploadImage(file);
+    if (uploaded.compressed) ElMessage.info('图片超过 512KB，已自动压缩后上传');
+    form[field] = uploaded.url;
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : getApiErrorMessage(error));
+  } finally {
+    imageUploading.value = null;
+  }
+}
+
+function removeStoreImage(field: 'logoUrl' | 'coverUrl'): void {
+  form[field] = null;
+}
+
+function imageSource(value: string | null | undefined): string {
+  return resolveApiAssetUrl(value);
 }
 
 async function save(): Promise<void> {
@@ -264,6 +295,64 @@ onMounted(load);
         <el-form-item label="店铺地址" prop="address"
           ><el-input v-model="form.address"
         /></el-form-item>
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="店铺 Logo">
+              <div class="image-editor">
+                <el-image
+                  v-if="form.logoUrl"
+                  class="store-image-preview store-image-preview--logo"
+                  :src="imageSource(form.logoUrl)"
+                  fit="cover"
+                  :preview-src-list="[imageSource(form.logoUrl)]"
+                />
+                <span v-else class="image-editor__empty">未上传</span>
+                <input
+                  class="image-editor__input"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  :disabled="imageUploading !== null"
+                  @change="uploadStoreImage('logoUrl', $event)"
+                />
+                <el-button
+                  v-if="form.logoUrl"
+                  text
+                  type="danger"
+                  @click="removeStoreImage('logoUrl')"
+                  >移除</el-button
+                >
+              </div>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="店铺封面">
+              <div class="image-editor">
+                <el-image
+                  v-if="form.coverUrl"
+                  class="store-image-preview store-image-preview--cover"
+                  :src="imageSource(form.coverUrl)"
+                  fit="cover"
+                  :preview-src-list="[imageSource(form.coverUrl)]"
+                />
+                <span v-else class="image-editor__empty">未上传</span>
+                <input
+                  class="image-editor__input"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  :disabled="imageUploading !== null"
+                  @change="uploadStoreImage('coverUrl', $event)"
+                />
+                <el-button
+                  v-if="form.coverUrl"
+                  text
+                  type="danger"
+                  @click="removeStoreImage('coverUrl')"
+                  >移除</el-button
+                >
+              </div>
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-form-item label="配送小区" prop="communityIds"
           ><el-select
             v-model="form.communityIds"
@@ -332,8 +421,49 @@ onMounted(load);
       </el-form>
       <template #footer
         ><el-button @click="dialogVisible = false">取消</el-button
-        ><el-button type="primary" :loading="saving" @click="save">保存</el-button></template
+        ><el-button
+          type="primary"
+          :loading="saving"
+          :disabled="imageUploading !== null"
+          @click="save"
+          >保存</el-button
+        ></template
       >
     </el-dialog>
   </div>
 </template>
+
+<style scoped>
+.image-editor {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+}
+
+.image-editor__empty {
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+}
+
+.image-editor__input {
+  max-width: 190px;
+  font-size: 12px;
+}
+
+.store-image-preview {
+  flex: 0 0 auto;
+  border: 1px solid var(--el-border-color);
+  border-radius: 6px;
+}
+
+.store-image-preview--logo {
+  width: 64px;
+  height: 64px;
+}
+
+.store-image-preview--cover {
+  width: 120px;
+  height: 64px;
+}
+</style>

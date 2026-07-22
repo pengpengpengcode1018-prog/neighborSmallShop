@@ -11,6 +11,7 @@ import { createCatalogRouter } from './admin/catalog.routes.js';
 import { createDeliveryRouter } from './admin/delivery.routes.js';
 import { createOperationsRouter } from './admin/operations.routes.js';
 import { createAdminUserRouter } from './admin/user.routes.js';
+import { createAdminMediaRouter } from './admin/media.routes.js';
 import type { WechatIdentityProvider } from '../providers/wechat-identity.provider.js';
 import type { WechatPhoneProvider } from '../providers/wechat-phone.provider.js';
 import type {
@@ -34,6 +35,7 @@ import { createMiniappPaymentRouter } from './miniapp/payment.routes.js';
 import { createMiniappStoreRouter } from './miniapp/store.routes.js';
 import { createMiniappUserRouter } from './miniapp/user.routes.js';
 import { createMiniappNotificationRouter } from './miniapp/notification.routes.js';
+import { createMediaRouter } from './media.routes.js';
 import type { WechatSubscriptionTemplates } from '../types/notification.js';
 
 export interface ApiRouterDependencies {
@@ -70,6 +72,7 @@ export function createApiRouter(dependencies: ApiRouterDependencies): Router {
   router.use(createAdminAlertRouter(notificationService).routes());
   router.use(createOperationsRouter().routes());
   router.use(createAdminUserRouter().routes());
+  router.use(createAdminMediaRouter().routes());
   router.use(createMiniappAuthRouter(dependencies.wechatIdentityProvider).routes());
   router.use(createMiniappAddressRouter(dependencies.wechatIdentityProvider).routes());
   router.use(createMiniappCartRouter(dependencies.wechatIdentityProvider).routes());
@@ -100,5 +103,6 @@ export function createApiRouter(dependencies: ApiRouterDependencies): Router {
       notificationService,
     ).routes(),
   );
+  router.use(createMediaRouter().routes());
   return router;
 }

@@ -17,7 +17,8 @@ import {
   type ProductInput,
   type ProductStatus,
 } from '../../api/catalog';
-import { getApiErrorMessage } from '../../api/http';
+import { getApiErrorMessage, resolveApiAssetUrl } from '../../api/http';
+import { uploadImage } from '../../api/media';
 import { listStores, type Store } from '../../api/stores';
 
 const stores = ref<Store[]>([]);
@@ -47,10 +48,13 @@ const productDialog = ref(false);
 const productSaving = ref(false);
 const editingProductId = ref<string | null>(null);
 const productFormRef = ref<FormInstance>();
+const productImageUploading = ref<'main' | 'gallery' | null>(null);
 const emptyProduct = (): ProductInput => ({
   storeId: selectedStoreId.value,
   categoryId: categories.value[0]?.id ?? '',
   name: '',
+  mainImageUrl: null,
+  galleryImageUrls: [],
   description: '',
   detail: '',
   price: '0.00',
@@ -164,6 +168,8 @@ function openProduct(item?: Product): void {
           storeId: item.storeId,
           categoryId: item.categoryId,
           name: item.name,
+          mainImageUrl: item.mainImageUrl,
+          galleryImageUrls: [...item.galleryImageUrls],
           description: item.description ?? '',
           detail: item.detail ?? '',
           price: item.price,
@@ -178,6 +184,42 @@ function openProduct(item?: Product): void {
       : emptyProduct(),
   );
   productDialog.value = true;
+}
+
+async function uploadProductImage(kind: 'main' | 'gallery', event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file) return;
+  if (kind === 'gallery' && productForm.galleryImageUrls.length >= 6) {
+    ElMessage.warning('商品轮播图最多上传 6 张');
+    return;
+  }
+  productImageUploading.value = kind;
+  try {
+    const image = await uploadImage(file);
+    if (image.compressed) ElMessage.info('图片超过 512KB，已自动压缩后上传');
+    if (kind === 'main') productForm.mainImageUrl = image.url;
+    else productForm.galleryImageUrls = [...productForm.galleryImageUrls, image.url];
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : getApiErrorMessage(error));
+  } finally {
+    productImageUploading.value = null;
+  }
+}
+
+function removeProductMainImage(): void {
+  productForm.mainImageUrl = null;
+}
+
+function removeProductGalleryImage(index: number): void {
+  productForm.galleryImageUrls = productForm.galleryImageUrls.filter(
+    (_, itemIndex) => itemIndex !== index,
+  );
+}
+
+function imageSource(value: string | null | undefined): string {
+  return resolveApiAssetUrl(value);
 }
 
 async function saveProduct(): Promise<void> {
@@ -292,7 +334,17 @@ onMounted(initialize);
           <el-button @click="loadProducts">查询</el-button>
         </div>
         <el-table v-loading="loading" :data="products" empty-text="暂无商品">
-          <el-table-column prop="name" label="商品名称" min-width="150" /><el-table-column
+          <el-table-column label="图片" width="76"
+            ><template #default="scope"
+              ><el-image
+                v-if="scope.row.mainImageUrl"
+                class="product-table-image"
+                :src="imageSource(scope.row.mainImageUrl)"
+                fit="cover"
+                :preview-src-list="[imageSource(scope.row.mainImageUrl)]"
+              /><span v-else class="image-table-empty">—</span></template
+            ></el-table-column
+          ><el-table-column prop="name" label="商品名称" min-width="150" /><el-table-column
             prop="category.name"
             label="分类"
             width="110"
@@ -369,7 +421,7 @@ onMounted(initialize);
     <el-dialog
       v-model="productDialog"
       :title="editingProductId ? '编辑商品' : '新建商品'"
-      width="680px"
+      width="760px"
       destroy-on-close
     >
       <el-form
@@ -392,6 +444,67 @@ onMounted(initialize);
                   :label="item.name"
                   :value="item.id" /></el-select></el-form-item></el-col
         ></el-row>
+        <el-row :gutter="16">
+          <el-col :span="10">
+            <el-form-item label="商品主图">
+              <div class="product-image-editor">
+                <el-image
+                  v-if="productForm.mainImageUrl"
+                  class="product-image-preview"
+                  :src="imageSource(productForm.mainImageUrl)"
+                  fit="cover"
+                  :preview-src-list="[imageSource(productForm.mainImageUrl)]"
+                />
+                <span v-else class="image-editor__empty">未上传</span>
+                <input
+                  class="image-editor__input"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  :disabled="productImageUploading !== null"
+                  @change="uploadProductImage('main', $event)"
+                />
+                <el-button
+                  v-if="productForm.mainImageUrl"
+                  text
+                  type="danger"
+                  @click="removeProductMainImage"
+                  >移除</el-button
+                >
+              </div>
+            </el-form-item>
+          </el-col>
+          <el-col :span="14">
+            <el-form-item label="商品轮播图（最多 6 张）">
+              <div class="product-gallery-editor">
+                <div
+                  v-for="(imageUrl, index) in productForm.galleryImageUrls"
+                  :key="imageUrl"
+                  class="product-gallery-editor__item"
+                >
+                  <el-image
+                    class="product-image-preview"
+                    :src="imageSource(imageUrl)"
+                    fit="cover"
+                    :preview-src-list="productForm.galleryImageUrls.map(imageSource)"
+                    :initial-index="index"
+                  />
+                  <el-button text type="danger" @click="removeProductGalleryImage(index)"
+                    >移除</el-button
+                  >
+                </div>
+                <input
+                  class="image-editor__input"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  :disabled="
+                    productImageUploading !== null || productForm.galleryImageUrls.length >= 6
+                  "
+                  @change="uploadProductImage('gallery', $event)"
+                />
+              </div>
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-row :gutter="16"
           ><el-col :span="12"
             ><el-form-item label="销售价" prop="price"
@@ -443,10 +556,57 @@ onMounted(initialize);
       </el-form>
       <template #footer
         ><el-button @click="productDialog = false">取消</el-button
-        ><el-button type="primary" :loading="productSaving" @click="saveProduct"
+        ><el-button
+          type="primary"
+          :loading="productSaving"
+          :disabled="productImageUploading !== null"
+          @click="saveProduct"
           >保存</el-button
         ></template
       >
     </el-dialog>
   </div>
 </template>
+
+<style scoped>
+.product-image-editor,
+.product-gallery-editor {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-height: 64px;
+}
+
+.product-gallery-editor__item {
+  display: inline-flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.product-image-preview,
+.product-table-image {
+  width: 64px;
+  height: 64px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 6px;
+}
+
+.product-table-image {
+  display: block;
+  width: 44px;
+  height: 44px;
+}
+
+.image-editor__empty,
+.image-table-empty {
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+}
+
+.image-editor__input {
+  max-width: 190px;
+  font-size: 12px;
+}
+</style>

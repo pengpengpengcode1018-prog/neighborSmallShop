@@ -10,7 +10,7 @@ import { useProductStore } from '../../stores/product';
 import { useStoreStore } from '../../stores/store';
 import { useUserStore } from '../../stores/user';
 import type { ProductSummary } from '../../types/domain';
-import { ApiRequestError } from '../../utils/request';
+import { ApiRequestError, resolveApiAssetUrl } from '../../utils/request';
 
 const storeStore = useStoreStore();
 const { detail, isDetailLoading, detailError } = storeToRefs(storeStore);
@@ -19,6 +19,7 @@ const { categories, products, selectedCategoryId, isLoading, loadError } =
   storeToRefs(productStore);
 const storeId = ref('');
 const communityId = ref<string | undefined>();
+const showStoreInfo = ref(false);
 const cartStore = useCartStore();
 const { cart, isMutating } = storeToRefs(cartStore);
 const userStore = useUserStore();
@@ -47,6 +48,14 @@ function retry(): void {
 function callStore(): void {
   if (!detail.value?.phone) return;
   void uni.makePhoneCall({ phoneNumber: detail.value.phone });
+}
+
+function openStoreInfo(): void {
+  showStoreInfo.value = true;
+}
+
+function closeStoreInfo(): void {
+  showStoreInfo.value = false;
 }
 
 function retryCatalog(): void {
@@ -138,7 +147,12 @@ function openCart(): void {
       <van-button size="small" type="primary" @click="retry">重新加载</van-button>
     </view>
     <template v-else-if="detail">
-      <image v-if="detail.coverUrl" class="store-cover" mode="aspectFill" :src="detail.coverUrl" />
+      <image
+        v-if="detail.coverUrl"
+        class="store-cover"
+        mode="aspectFill"
+        :src="resolveApiAssetUrl(detail.coverUrl)"
+      />
       <view v-else class="store-cover store-cover--fallback">
         <text>{{ detail.name.slice(0, 1) }}</text>
       </view>
@@ -146,9 +160,14 @@ function openCart(): void {
       <view class="store-overview">
         <view class="store-overview__heading">
           <text class="store-overview__name">{{ detail.name }}</text>
-          <van-tag :type="detail.status === 'OPEN' ? 'success' : 'warning'">
-            {{ detail.status === 'OPEN' ? '营业中' : '暂停接单' }}
-          </van-tag>
+          <view class="store-overview__actions">
+            <van-tag :type="detail.status === 'OPEN' ? 'success' : 'warning'">
+              {{ detail.status === 'OPEN' ? '营业中' : '暂停接单' }}
+            </van-tag>
+            <van-button class="store-info-trigger" size="small" plain @click="openStoreInfo">
+              店铺信息
+            </van-button>
+          </view>
         </view>
         <text v-if="detail.announcement" class="store-overview__announcement">
           {{ detail.announcement }}
@@ -177,18 +196,6 @@ function openCart(): void {
           left-icon="info-o"
           text="店铺当前暂停接单，仍可浏览基础信息。"
         />
-      </view>
-
-      <view class="info-card">
-        <text class="info-card__title">店铺信息</text>
-        <text v-if="detail.description" class="info-card__description">
-          {{ detail.description }}
-        </text>
-        <text class="info-card__line"
-          >营业时间：{{ detail.businessStartTime }}–{{ detail.businessEndTime }}</text
-        >
-        <text class="info-card__line">地址：{{ detail.address }}</text>
-        <van-button plain block @click="callStore">联系店铺 {{ detail.phone }}</van-button>
       </view>
 
       <view class="catalog-card">
@@ -236,6 +243,36 @@ function openCart(): void {
           </scroll-view>
         </view>
       </view>
+
+      <van-popup
+        :show="showStoreInfo"
+        position="bottom"
+        round
+        closeable
+        safe-area-inset-bottom
+        @close="closeStoreInfo"
+      >
+        <view class="store-info-popup">
+          <view class="store-info-popup__header">
+            <text class="store-info-popup__title">店铺信息</text>
+            <text class="store-info-popup__subtitle">{{ detail.name }}</text>
+          </view>
+          <text v-if="detail.description" class="store-info-popup__description">
+            {{ detail.description }}
+          </text>
+          <view class="store-info-popup__rows">
+            <view class="store-info-popup__row">
+              <text class="store-info-popup__label">营业时间</text>
+              <text>{{ detail.businessStartTime }}–{{ detail.businessEndTime }}</text>
+            </view>
+            <view class="store-info-popup__row">
+              <text class="store-info-popup__label">店铺地址</text>
+              <text class="store-info-popup__value">{{ detail.address }}</text>
+            </view>
+          </view>
+          <van-button plain block @click="callStore">联系店铺 {{ detail.phone }}</van-button>
+        </view>
+      </van-popup>
     </template>
     <CartBar
       v-if="cart.summary.itemCount > 0"
@@ -277,7 +314,6 @@ function openCart(): void {
 }
 
 .store-overview,
-.info-card,
 .catalog-card {
   margin: 24rpx 28rpx 0;
   padding: 32rpx;
@@ -294,22 +330,31 @@ function openCart(): void {
 }
 
 .store-overview__name {
+  min-width: 0;
+  flex: 1;
   font-size: 40rpx;
   font-weight: 700;
 }
 
+.store-overview__actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.store-info-trigger {
+  margin: 0;
+}
+
 .store-overview__announcement,
-.info-card__description,
-.info-card__line,
-.info-card__title,
 .store-facts__value,
 .store-facts__label {
   display: block;
 }
 
 .store-overview__announcement,
-.info-card__description,
-.info-card__line {
+.store-info-popup__description {
   color: #5f7068;
   font-size: 26rpx;
   line-height: 1.65;
@@ -336,17 +381,6 @@ function openCart(): void {
   margin-top: 6rpx;
   color: #7a8882;
   font-size: 22rpx;
-}
-
-.info-card__title {
-  margin-bottom: 20rpx;
-  font-size: 32rpx;
-  font-weight: 650;
-}
-
-.info-card__description,
-.info-card__line {
-  margin-bottom: 18rpx;
 }
 
 .catalog-card {
@@ -413,5 +447,68 @@ function openCart(): void {
   min-width: 0;
   height: 100%;
   flex: 1;
+}
+
+.store-info-popup {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 44rpx 32rpx calc(32rpx + env(safe-area-inset-bottom));
+}
+
+.store-info-popup__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20rpx;
+  padding-right: 64rpx;
+}
+
+.store-info-popup__title {
+  font-size: 36rpx;
+  font-weight: 700;
+}
+
+.store-info-popup__subtitle {
+  overflow: hidden;
+  color: #7a8882;
+  font-size: 24rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.store-info-popup__description {
+  display: block;
+  margin-top: 24rpx;
+  padding: 20rpx;
+  background: #f3f8f5;
+  border-radius: 16rpx;
+}
+
+.store-info-popup__rows {
+  margin: 24rpx 0 28rpx;
+  border-top: 1rpx solid #edf2ef;
+}
+
+.store-info-popup__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24rpx;
+  padding: 22rpx 0;
+  font-size: 26rpx;
+  line-height: 1.5;
+  border-bottom: 1rpx solid #edf2ef;
+}
+
+.store-info-popup__label {
+  flex: 0 0 150rpx;
+  color: #7a8882;
+}
+
+.store-info-popup__value {
+  min-width: 0;
+  flex: 1;
+  text-align: right;
+  word-break: break-all;
 }
 </style>

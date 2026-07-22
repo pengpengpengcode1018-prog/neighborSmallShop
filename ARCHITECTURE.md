@@ -33,7 +33,7 @@
 | -------------- | ------------------------------------------------------- | ------------------------------ | ----------------------------- |
 | 身份与权限     | `auth`、`users`、`admins`、微信身份/手机号 provider     | 微信登录、手机号授权、居民用户 | `overview-and-scope.md`       |
 | 配送地域与时间 | `communities`、`store_communities`、`delivery_slots`    | 小区选择、配送范围与时段       | `shopping-journey.md`         |
-| 店铺与商品     | `stores`、`categories`、`products`                      | 首页、店铺、商品               | `shopping-journey.md`         |
+| 店铺与商品     | `stores`、`categories`、`products`、受控图片媒体        | 首页、店铺、商品               | `shopping-journey.md`         |
 | 购物车与地址   | `cart`、`addresses`                                     | 购物车、地址                   | `shopping-journey.md`         |
 | 订单与库存     | `orders`、`order_items`、状态日志、超时关单 job         | 下单、订单、后台订单           | `order-lifecycle.md`          |
 | 支付与退款     | `payments`、`refunds`、通知审计与微信支付/退款 provider | 支付、退款                     | `payments-and-refunds.md`     |
@@ -51,6 +51,7 @@
 - Service 承担事务、状态机、金额、库存和授权规则。
 - Repository 封装 Prisma/Redis 读写，不返回未经边界处理的外部输入。
 - Provider 封装微信、对象存储、消息等外部系统；Service 只依赖稳定契约，不接触外部原始响应。
+- 店铺和商品图片先经管理员鉴权与文件真实性校验，再以服务端生成的媒体标识不可变保存；业务表只保存 `/api/v1/media/images/:id` 受控 URL，居民端不能写图片字段。
 - `npm run verify:architecture` 机械检查低层导入高层的违规边。
 
 ## 跨端契约

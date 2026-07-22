@@ -2,7 +2,7 @@
 
 - 来源：`server/prisma/schema.prisma`
 - 验证：`npm run prisma:validate --workspace @nearby-shop/server`
-- 最近刷新：2026-07-21
+- 最近刷新：2026-07-22
 
 ## 当前模型
 
@@ -14,11 +14,11 @@
 | `UserLoginLog`               | `user_login_logs`               | 去敏的居民登录成功、失败和禁用审计                         |
 | `OperationLog`               | `operation_logs`                | 后台写操作的去敏、不可删除审计                             |
 | `Community`                  | `communities`                   | 可配送小区和软删除状态                                     |
-| `Store`                      | `stores`                        | 店铺、营业时间、配送方式、起送额和默认配送费               |
+| `Store`                      | `stores`                        | 店铺、Logo/封面、营业时间、配送方式、起送额和默认配送费    |
 | `StoreCommunity`             | `store_communities`             | 店铺配送范围和按小区覆盖配置                               |
 | `DeliverySlot`               | `delivery_slots`                | 每日预约送达时刻、截止时间和订单容量                       |
 | `ProductCategory`            | `product_categories`            | 店铺内商品分类                                             |
-| `Product`                    | `products`                      | 单规格商品、价格、库存和上下架状态                         |
+| `Product`                    | `products`                      | 单规格商品、主图/轮播图、价格、库存和上下架状态            |
 | `Cart`                       | `carts`                         | 居民当前单店铺购物车                                       |
 | `CartItem`                   | `cart_items`                    | 购物车商品与当前选择数量                                   |
 | `Address`                    | `addresses`                     | 居民收货地址、平台小区、默认与软删除状态                   |
@@ -33,6 +33,7 @@
 | `SubscriptionConsentReceipt` | `subscription_consent_receipts` | 授权结果请求的幂等摘要                                     |
 | `UserNotification`           | `user_notifications`            | 从订单状态日志派生的居民消息 outbox                        |
 | `AdminAlert`                 | `admin_alerts`                  | 新单、超时、退款和低库存的去敏后台提醒                     |
+| `MediaAsset`                 | `media_assets`                  | 管理员上传的不可变 PNG/JPEG/WebP 图片二进制与受控媒体标识  |
 
 ## 已明确延期
 
@@ -45,6 +46,8 @@
 微信登录临时 code、手机号动态 code、access token 与 session key 不落库。`users` 只保存服务所需的稳定微信身份、居民主动提交的可选昵称与受控头像、经微信平台验证且全局唯一的可选手机号和当前小区；头像二进制只接受 PNG、JPEG、WebP 且不超过 512 KiB，对外通过受控读取接口返回。`user_login_logs` 只保存稳定失败分类，不保存 code、OpenID、session key 或 JWT。本人资料可按地址预填需要返回完整手机号，后台居民查询只返回脱敏号码、绑定状态及可展示资料，不返回头像二进制。
 
 `users.current_community_id` 可空并引用固定小区；居民只能通过服务端选择启用且未删除的小区。管理员后续停用或软删除已选小区时，资料恢复会清空该引用，避免失效范围继续参与下单判断。
+
+`media_assets` 由管理员上传产生，保存已验证的 MIME、字节数和二进制内容；创建管理员删除时仅置空创建者引用，媒体本身不可变且无公共覆盖/删除 API。店铺 Logo/封面和商品主图/轮播图字段只保存服务端生成的 `/api/v1/media/images/:id` URL，历史订单继续使用创建时的独立图片 URL。
 
 `carts.user_id` 唯一，保证每位居民同时只有一个购物车；`carts.store_id` 固定其单店上下文，跨店替换必须在事务中先清空旧 `cart_items`。购物车项只保存商品引用和数量，价格、库存、配送费与起送额每次读取和写入时从权威表重新计算；清空购物车可以物理删除当前临时状态，不影响未来订单快照。
 

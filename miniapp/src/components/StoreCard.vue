@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 
 import type { StoreSummary } from '../types/domain';
+import { resolveApiAssetUrl } from '../utils/request';
 
 const props = defineProps<{ store: StoreSummary }>();
 const emit = defineEmits<{ select: [store: StoreSummary] }>();
@@ -17,7 +18,7 @@ const deliveryText = computed(() => {
 <template>
   <view class="store-card" @click="emit('select', store)">
     <view v-if="store.logoUrl" class="store-card__logo-shell">
-      <image class="store-card__logo" mode="aspectFill" :src="store.logoUrl" />
+      <image class="store-card__logo" mode="aspectFill" :src="resolveApiAssetUrl(store.logoUrl)" />
     </view>
     <view v-else class="store-card__logo-shell store-card__logo-shell--fallback">
       <text>{{ store.name.slice(0, 1) }}</text>

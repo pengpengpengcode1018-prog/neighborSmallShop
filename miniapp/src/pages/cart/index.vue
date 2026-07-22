@@ -6,6 +6,7 @@ import CartBar from '../../components/CartBar.vue';
 import { useCartStore } from '../../stores/cart';
 import { useUserStore } from '../../stores/user';
 import type { CartItem } from '../../types/domain';
+import { resolveApiAssetUrl } from '../../utils/request';
 
 const cartStore = useCartStore();
 const { cart, isLoading, isMutating, loadError, mutationError } = storeToRefs(cartStore);
@@ -103,7 +104,7 @@ function goShopping(): void {
             v-if="item.imageUrl"
             class="cart-item__image"
             mode="aspectFill"
-            :src="item.imageUrl"
+            :src="resolveApiAssetUrl(item.imageUrl)"
           />
           <view v-else class="cart-item__image cart-item__image--fallback">
             {{ item.name.slice(0, 1) }}

@@ -21,6 +21,7 @@ export interface AuditEvent {
 
 const allowedKeys = new Set([
   'asapEnabled',
+  'byteSize',
   'categoryId',
   'city',
   'communityIds',
@@ -31,6 +32,7 @@ const allowedKeys = new Set([
   'hasRemark',
   'isHot',
   'maxOrders',
+  'mimeType',
   'name',
   'originalPrice',
   'price',

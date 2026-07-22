@@ -17,6 +17,8 @@ const moneySchema = z.string().regex(/^\d{1,8}\.\d{2}$/);
 const timeSchema = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/);
 const writeSchema = z.object({
   name: z.string().trim().min(1).max(120),
+  logoUrl: z.string().trim().min(1).max(1024).nullable().optional(),
+  coverUrl: z.string().trim().min(1).max(1024).nullable().optional(),
   phone: z.string().trim().min(1).max(32),
   address: z.string().trim().min(1).max(255),
   description: z.string().trim().max(5000).optional(),

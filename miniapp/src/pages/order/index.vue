@@ -5,6 +5,7 @@ import { storeToRefs } from 'pinia';
 import { useOrderStore } from '../../stores/order';
 import { useUserStore } from '../../stores/user';
 import type { OrderStatus, ResidentOrderCard } from '../../types/domain';
+import { resolveApiAssetUrl } from '../../utils/request';
 
 const filters: Array<{ label: string; value: OrderStatus | null }> = [
   { label: '全部', value: null },
@@ -95,7 +96,7 @@ function goShopping(): void {
             <image
               v-if="order.store.logoUrl"
               class="store-logo"
-              :src="order.store.logoUrl"
+              :src="resolveApiAssetUrl(order.store.logoUrl)"
               mode="aspectFill"
             />
             <view v-else class="store-logo store-logo--fallback">店</view>
@@ -113,7 +114,7 @@ function goShopping(): void {
               <image
                 v-if="item.imageUrl"
                 class="product-image"
-                :src="item.imageUrl"
+                :src="resolveApiAssetUrl(item.imageUrl)"
                 mode="aspectFill"
               />
               <view v-else class="product-image product-image--fallback">{{

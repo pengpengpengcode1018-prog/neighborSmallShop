@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ProductSummary } from '../types/domain';
+import { resolveApiAssetUrl } from '../utils/request';
 
 defineProps<{ product: ProductSummary }>();
 const emit = defineEmits<{
@@ -14,7 +15,7 @@ const emit = defineEmits<{
       v-if="product.mainImageUrl"
       class="product-card__image"
       mode="aspectFill"
-      :src="product.mainImageUrl"
+      :src="resolveApiAssetUrl(product.mainImageUrl)"
     />
     <view v-else class="product-card__image product-card__image--fallback">
       <text>{{ product.name.slice(0, 1) }}</text>

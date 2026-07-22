@@ -1,5 +1,6 @@
 import { prisma } from '../config/database.js';
-import type { EnableStatus, Prisma, ProductStatus } from '../generated/prisma/client.js';
+import { Prisma } from '../generated/prisma/client.js';
+import type { EnableStatus, ProductStatus } from '../generated/prisma/client.js';
 import { auditRepository, type AuditActor } from './audit.repository.js';
 
 export class InvalidCatalogReferenceError extends Error {}
@@ -17,6 +18,8 @@ export interface ProductWriteInput {
   storeId: string;
   categoryId: string;
   name: string;
+  mainImageUrl?: string | null | undefined;
+  galleryImageUrls?: string[] | undefined;
   description?: string | undefined;
   detail?: string | undefined;
   price: string;
@@ -43,6 +46,8 @@ function productAudit(input: ProductWriteInput) {
     storeId: input.storeId,
     categoryId: input.categoryId,
     name: input.name,
+    hasMainImage: Boolean(input.mainImageUrl),
+    galleryImageCount: input.galleryImageUrls?.length ?? 0,
     price: input.price,
     originalPrice: input.originalPrice ?? null,
     stock: input.stock,
@@ -74,11 +79,20 @@ async function validateProductContext(tx: Prisma.TransactionClient, input: Produ
   }
 }
 
-function productData(input: ProductWriteInput) {
+function productData(
+  input: ProductWriteInput,
+  existing?: { mainImageUrl: string | null; galleryImageUrls: Prisma.JsonValue | null },
+) {
   return {
     storeId: input.storeId,
     categoryId: input.categoryId,
     name: input.name,
+    mainImageUrl:
+      input.mainImageUrl !== undefined ? input.mainImageUrl : (existing?.mainImageUrl ?? null),
+    galleryImageUrls:
+      input.galleryImageUrls !== undefined
+        ? input.galleryImageUrls
+        : (existing?.galleryImageUrls ?? Prisma.JsonNull),
     description: input.description ?? null,
     detail: input.detail ?? null,
     price: input.price,
@@ -217,7 +231,7 @@ export const catalogRepository = {
       const before = await tx.product.findUniqueOrThrow({ where: { id } });
       const updated = await tx.product.update({
         where: { id },
-        data: productData(input),
+        data: productData(input, before),
         include: { category: true },
       });
       await auditRepository.create(tx, {
@@ -230,6 +244,10 @@ export const catalogRepository = {
           storeId: before.storeId,
           categoryId: before.categoryId,
           name: before.name,
+          mainImageUrl: before.mainImageUrl,
+          galleryImageUrls: Array.isArray(before.galleryImageUrls)
+            ? before.galleryImageUrls.filter((value): value is string => typeof value === 'string')
+            : [],
           price: before.price.toFixed(2),
           ...(before.originalPrice ? { originalPrice: before.originalPrice.toFixed(2) } : {}),
           stock: before.stock,

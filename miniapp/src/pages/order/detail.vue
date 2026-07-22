@@ -6,6 +6,7 @@ import { ref } from 'vue';
 import { useOrderStore } from '../../stores/order';
 import { useUserStore } from '../../stores/user';
 import { selectRefundReason, type RefundReasonOption } from '../../utils/refund-reason-selection';
+import { resolveApiAssetUrl } from '../../utils/request';
 
 const orderStore = useOrderStore();
 const {
@@ -195,7 +196,7 @@ function formatTime(value: string): string {
           <image
             v-if="item.imageUrl"
             class="detail-item__image"
-            :src="item.imageUrl"
+            :src="resolveApiAssetUrl(item.imageUrl)"
             mode="aspectFill"
           />
           <view v-else class="detail-item__image detail-item__fallback">{{

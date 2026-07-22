@@ -6,6 +6,8 @@ export class InvalidCommunityReferenceError extends Error {}
 
 export interface StoreWriteInput {
   name: string;
+  logoUrl?: string | null | undefined;
+  coverUrl?: string | null | undefined;
   phone: string;
   address: string;
   description?: string | undefined;
@@ -20,9 +22,14 @@ export interface StoreWriteInput {
   communityIds: string[];
 }
 
-function storeData(input: StoreWriteInput) {
+function storeData(
+  input: StoreWriteInput,
+  existing?: { logoUrl: string | null; coverUrl: string | null },
+) {
   return {
     name: input.name,
+    logoUrl: input.logoUrl !== undefined ? input.logoUrl : (existing?.logoUrl ?? null),
+    coverUrl: input.coverUrl !== undefined ? input.coverUrl : (existing?.coverUrl ?? null),
     phone: input.phone,
     address: input.address,
     description: input.description ?? null,
@@ -40,6 +47,8 @@ function storeData(input: StoreWriteInput) {
 function auditSummary(input: StoreWriteInput) {
   return {
     name: input.name,
+    hasLogo: Boolean(input.logoUrl),
+    hasCover: Boolean(input.coverUrl),
     status: input.status,
     sortOrder: input.sortOrder,
     communityIds: input.communityIds,
@@ -107,13 +116,20 @@ export const storeRepository = {
       await validateCommunities(tx, input.communityIds);
       const before = await tx.store.findUniqueOrThrow({
         where: { id },
-        include: { communities: { select: { communityId: true } } },
+        select: {
+          logoUrl: true,
+          coverUrl: true,
+          name: true,
+          status: true,
+          sortOrder: true,
+          communities: { select: { communityId: true } },
+        },
       });
       await tx.storeCommunity.deleteMany({ where: { storeId: id } });
       const updated = await tx.store.update({
         where: { id },
         data: {
-          ...storeData(input),
+          ...storeData(input, before),
           communities: { create: input.communityIds.map((communityId) => ({ communityId })) },
         },
         include: { communities: { include: { community: true } } },
@@ -126,6 +142,8 @@ export const storeRepository = {
         description: `编辑店铺：${updated.name}`,
         beforeData: {
           name: before.name,
+          hasLogo: Boolean(before.logoUrl),
+          hasCover: Boolean(before.coverUrl),
           status: before.status,
           sortOrder: before.sortOrder,
           communityIds: before.communities.map((item) => item.communityId),

@@ -178,6 +178,7 @@ model Admin {
   operationLogs       OperationLog[]
   reviewedRefunds     Refund[]        @relation("RefundReviewer")
   readAlerts          AdminAlert[]    @relation("AdminAlertReader")
+  mediaAssets         MediaAsset[]    @relation("MediaCreator")
 
   @@index([status], map: "idx_admins_status")
   @@map("admins")
@@ -227,6 +228,19 @@ model User {
   @@index([currentCommunityId], map: "idx_users_current_community")
   @@index([status, createdAt], map: "idx_users_status_created_at")
   @@map("users")
+}
+
+model MediaAsset {
+  id               String   @id @default(cuid()) @db.VarChar(30)
+  mimeType         String   @map("mime_type") @db.VarChar(32)
+  byteSize         Int      @map("byte_size") @db.UnsignedInt
+  data             Bytes    @db.MediumBlob
+  createdByAdminId String?  @map("created_by_admin_id") @db.VarChar(30)
+  createdAt        DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  createdByAdmin   Admin?   @relation("MediaCreator", fields: [createdByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([createdByAdminId, createdAt], map: "idx_media_assets_creator_time")
+  @@map("media_assets")
 }
 
 model UserLoginLog {
